@@ -189,6 +189,265 @@
             box-shadow: 0 2px 8px rgba(0,0,0,0.2);
             transition: all 0.2s ease;
         }
+
+        /**
+ * OREF IMAGE UPLOADER - Apps Script Web App
+ * 
+ * SETUP INSTRUCTIONS:
+ * 1. Open Google Drive
+ * 2. Go to Extensions → Apps Script (or create new Apps Script project)
+ * 3. Paste this code
+ * 4. Deploy as Web App:
+ *    - Execute as: "Me"
+ *    - Who has access: "Anyone"
+ * 5. Copy the Web App URL
+ * 6. In dashboard, go to Configuration tab
+ * 7. Add new field for "Oref Upload URL" and save the URL there
+ */
+
+// Your Oref folder ID from the handoff document
+const OREF_FOLDER_ID = '1dWnw-eGmCtj14mfT-ualFkI7o5EdMkXE';
+
+/**
+ * Handle POST requests - Upload oref images
+ */
+function doPost(e) {
+  try {
+    Logger.log('Received upload request');
+    
+    // Parse the request  
+    let data;
+    try {
+      data = JSON.parse(e.postData.contents);
+    } catch (parseError) {
+      // If JSON parse fails, handle as form data (for no-cors uploads)
+      data = e.parameter || {};
+    }
+    
+    if (data.action === 'uploadOref') {
+      return uploadOrefImage(data);
+    }
+    
+    if (data.action === 'listOrefs') {
+      return listOrefsForStory(data);
+    }
+    
+    return ContentService
+      .createTextOutput(JSON.stringify({
+        success: false,
+        error: 'Unknown action: ' + (data.action || 'none')
+      }))
+      .setMimeType(ContentService.MimeType.JSON);
+      
+  } catch (error) {
+    Logger.log('Error in doPost:', error);
+    
+    return ContentService
+      .createTextOutput(JSON.stringify({
+        success: false,
+        error: error.toString()
+      }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+/**
+ * Handle GET requests (for testing)
+ */
+function doGet(e) {
+  return ContentService
+    .createTextOutput('Oref Upload Web App is running. Use POST requests to upload images.')
+    .setMimeType(ContentService.MimeType.TEXT);
+}
+
+/**
+ * Upload oref image to Google Drive
+ */
+function uploadOrefImage(data) {
+  try {
+    const storyName = data.storyName;
+    const batchId = data.batchId;
+    const characterName = data.characterName;
+    const imageData = data.imageData; // Base64 encoded image
+    const fileName = data.fileName;
+    
+    Logger.log('Uploading oref for:', characterName, 'in story:', storyName);
+    
+    // Get or create story folder
+    const storyFolderName = batchId ? `${storyName} - ${batchId}` : storyName;
+    const storyFolder = getOrCreateFolder(OREF_FOLDER_ID, storyFolderName);
+    
+    Logger.log('Story folder:', storyFolder.getName(), 'ID:', storyFolder.getId());
+    
+    // Decode base64 image
+    const imageBlob = Utilities.newBlob(
+      Utilities.base64Decode(imageData.split(',')[1]), // Remove data:image/png;base64, prefix
+      'image/png',
+      sanitizeFileName(characterName) + '.png'
+    );
+    
+    // Check if file already exists and delete it
+    const existingFiles = storyFolder.getFilesByName(imageBlob.getName());
+    while (existingFiles.hasNext()) {
+      const existingFile = existingFiles.next();
+      Logger.log('Deleting existing file:', existingFile.getName());
+      existingFile.setTrashed(true);
+    }
+    
+    // Create the file
+    const file = storyFolder.createFile(imageBlob);
+    Logger.log('File created:', file.getName());
+    
+    // Make file publicly accessible
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    
+    // Get public URL
+    const publicUrl = `https://drive.google.com/uc?export=view&id=${file.getId()}`;
+    
+    Logger.log('Public URL:', publicUrl);
+    
+    return ContentService
+      .createTextOutput(JSON.stringify({
+        success: true,
+        url: publicUrl,
+        fileId: file.getId(),
+        fileName: file.getName(),
+        folderName: storyFolder.getName()
+      }))
+      .setMimeType(ContentService.MimeType.JSON);
+      
+  } catch (error) {
+    Logger.log('Error uploading oref:', error);
+    
+    return ContentService
+      .createTextOutput(JSON.stringify({
+        success: false,
+        error: error.toString()
+      }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+/**
+ * Get or create a folder
+ */
+function getOrCreateFolder(parentFolderId, folderName) {
+  const parentFolder = DriveApp.getFolderById(parentFolderId);
+  
+  // Check if folder exists
+  const folders = parentFolder.getFoldersByName(folderName);
+  
+  if (folders.hasNext()) {
+    return folders.next();
+  }
+  
+  // Create new folder
+  return parentFolder.createFolder(folderName);
+}
+
+/**
+ * Sanitize filename - remove special characters
+ */
+function sanitizeFileName(name) {
+  return name
+    .replace(/[^a-zA-Z0-9_\-]/g, '_') // Replace special chars with underscore
+    .replace(/_+/g, '_') // Replace multiple underscores with single
+    .replace(/^_|_$/g, ''); // Remove leading/trailing underscores
+}
+
+/**
+ * Test function - run this to verify the script works
+ */
+function testOrefUpload() {
+  const testData = {
+    action: 'uploadOref',
+    storyName: 'TEST STORY',
+    batchId: '20250119_120000',
+    characterName: 'test_character',
+    fileName: 'test.png',
+    imageData: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==' // 1x1 red pixel
+  };
+  
+  const mockEvent = {
+    postData: {
+      contents: JSON.stringify(testData)
+    }
+  };
+  
+  const response = doPost(mockEvent);
+  Logger.log('Test response:', response.getContent());
+}
+
+/**
+ * List all orefs for a story with their Drive URLs
+ */
+function listOrefsForStory(data) {
+  try {
+    const storyName = data.storyName;
+    const batchId = data.batchId;
+    
+    if (!storyName) {
+      throw new Error('Story name required');
+    }
+    
+    Logger.log(`Listing orefs for story: ${storyName} - ${batchId}`);
+    
+    // Get story folder
+    const storyFolderName = batchId ? `${storyName} - ${batchId}` : storyName;
+    const parentFolder = DriveApp.getFolderById(OREF_FOLDER_ID);
+    
+    // Find story folder
+    const folders = parentFolder.getFoldersByName(storyFolderName);
+    
+    if (!folders.hasNext()) {
+      Logger.log('Story folder not found');
+      return ContentService
+        .createTextOutput(JSON.stringify({
+          success: true,
+          orefs: []
+        }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    const storyFolder = folders.next();
+    
+    // List all files in folder
+    const files = storyFolder.getFiles();
+    const orefs = [];
+    
+    while (files.hasNext()) {
+      const file = files.next();
+      const fileName = file.getName();
+      const characterName = fileName.replace('.png', '').replace('.jpg', '').replace('.jpeg', '').replace(/_/g, ' ');
+      
+      orefs.push({
+        characterName: characterName,
+        fileName: fileName,
+        fileId: file.getId(),
+        url: `https://drive.google.com/uc?export=view&id=${file.getId()}`
+      });
+    }
+    
+    Logger.log(`Found ${orefs.length} orefs`);
+    
+    return ContentService
+      .createTextOutput(JSON.stringify({
+        success: true,
+        orefs: orefs
+      }))
+      .setMimeType(ContentService.MimeType.JSON);
+      
+  } catch (error) {
+    Logger.log('Error listing orefs:', error);
+    
+    return ContentService
+      .createTextOutput(JSON.stringify({
+        success: false,
+        error: error.toString()
+      }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
         
         .section:hover {
             border-color: var(--border-accent);
