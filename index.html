@@ -1906,49 +1906,39 @@
                 // Convert file to base64
                 const base64Data = await fileToBase64(file);
                 
-                // Prepare upload data
-                const uploadData = {
-                    action: 'uploadOref',
-                    storyName: currentStory,
-                    batchId: currentBatchId,
-                    characterName: characterName,
-                    fileName: file.name,
-                    imageData: base64Data
-                };
+                // Use FormData to avoid CORS preflight
+                const formData = new FormData();
+                formData.append('action', 'uploadOref');
+                formData.append('storyName', currentStory);
+                formData.append('batchId', currentBatchId || '');
+                formData.append('characterName', characterName);
+                formData.append('fileName', file.name);
+                formData.append('imageData', base64Data);
                 
-                // Upload to Apps Script
+                // Upload to Apps Script using no-cors mode
+                // This means we won't get the response, but the upload will work
                 const response = await fetch(uploadUrl, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(uploadData)
+                    body: formData,
+                    mode: 'no-cors'  // Bypass CORS - we won't see the response
                 });
                 
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
+                // With no-cors, we can't read the response, so we assume success
+                // The user can verify by checking their Drive folder
+                console.log(`✅ Oref upload request sent for ${characterName}`);
                 
-                const result = await response.json();
+                // Update status (we assume success since no-cors doesn't give us feedback)
+                characterOrefs[characterName] = {
+                    fileUrl: characterOrefs[characterName].fileUrl,
+                    driveUrl: '(uploaded - check Drive)',
+                    file: file,
+                    uploading: false
+                };
                 
-                if (result.success) {
-                    console.log(`✅ Oref uploaded successfully: ${result.url}`);
-                    
-                    // Update with Drive URL
-                    characterOrefs[characterName] = {
-                        fileUrl: characterOrefs[characterName].fileUrl,
-                        driveUrl: result.url,
-                        file: file,
-                        uploading: false
-                    };
-                    
-                    // Re-display characters with success
-                    displayCharacters();
-                    
-                    alert(`✅ Oref uploaded successfully!\n\nFolder: ${result.folderName}\nFile: ${result.fileName}`);
-                } else {
-                    throw new Error(result.error || 'Upload failed');
-                }
+                // Re-display characters with success
+                displayCharacters();
+                
+                alert(`✅ Upload request sent!\n\nCharacter: ${characterName}\nFolder: ${currentStory}\n\nCheck your Google Drive Oref folder to confirm the upload.`);
                 
             } catch (error) {
                 console.error('❌ Error uploading oref:', error);
