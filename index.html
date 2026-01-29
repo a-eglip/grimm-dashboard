@@ -1,276 +1,4130 @@
-/**
- * OREF IMAGE UPLOADER - Apps Script Web App
- * 
- * SETUP INSTRUCTIONS:
- * 1. Open Google Drive
- * 2. Go to Extensions → Apps Script (or create new Apps Script project)
- * 3. Paste this code
- * 4. Deploy as Web App:
- *    - Execute as: "Me"
- *    - Who has access: "Anyone"
- * 5. Copy the Web App URL
- * 6. In dashboard, go to Configuration tab
- * 7. Add new field for "Oref Upload URL" and save the URL there
- */
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grimm Automation Dashboard</title>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
+    <style>
+        /* ========== CSS VARIABLES - ENCHANTED MODERN ========== */
+        :root {
+            /* Background - Dark mystical blue */
+            --bg-primary: #0f1419;
+            --bg-secondary: #1a1f2e;
+            --bg-card: #252d3d;
+            --bg-input: #1e2433;
+            
+            /* Accents - Magical but not yellow */
+            --accent-mystical: #4a9eff;
+            --accent-royal: #8b5cf6;
+            --accent-crimson: #dc2626;
+            --accent-gold: #c9a961;
+            --accent-success: #10b981;
+            
+            /* Text */
+            --text-primary: #e5e7eb;
+            --text-secondary: #9ca3af;
+            --text-dim: #6b7280;
+            
+            /* Borders */
+            --border-color: #374151;
+            --border-accent: rgba(201, 169, 97, 0.3);
+        }
+        
+        /* ========== RESET & BASE ========== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            color: var(--text-primary);
+            background: var(--bg-primary);
+            line-height: 1.6;
+        }
+        
+        /* ========== LAYOUT ========== */
+        .dashboard {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0;
+        }
+        
+        /* Header */
+        .header {
+            background: var(--bg-secondary);
+            padding: 20px 30px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+        
+        .header-title {
+            font-family: 'Cinzel', serif;
+            font-size: 26px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent-mystical), #60a5fa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-shadow: 0 0 20px rgba(74, 158, 255, 0.3);
+        }
+        
+        .clear-cache-btn {
+            background: var(--accent-crimson);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 6px rgba(220, 38, 38, 0.3);
+        }
+        
+        .clear-cache-btn:hover {
+            background: #b91c1c;
+            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.5);
+            transform: translateY(-1px);
+        }
+        
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent-success);
+            box-shadow: 0 0 8px var(--accent-success);
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        /* Filters Bar */
+        .filters-bar {
+            background: var(--bg-secondary);
+            padding: 15px 30px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+        
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        .filter-group label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+        
+        .filter-group select {
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+            min-width: 180px;
+            transition: all 0.2s ease;
+        }
+        
+        .filter-group select:hover {
+            border-color: var(--accent-mystical);
+        }
+        
+        .filter-group select:focus {
+            outline: none;
+            border-color: var(--accent-mystical);
+            box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.1);
+        }
+        
+        .loading-text {
+            color: var(--accent-mystical);
+            font-size: 13px;
+            font-style: italic;
+            margin-left: auto;
+        }
+        
+        /* Main Content */
+        .content {
+            padding: 30px;
+        }
+        
+        /* ========== SECTION CARDS ========== */
+        .section {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            margin-bottom: 20px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            transition: all 0.2s ease;
+        }
+        
+        .section:hover {
+            border-color: var(--border-accent);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        
+        .section-header {
+            padding: 20px 25px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+        
+        .section-header:hover {
+            background: rgba(74, 158, 255, 0.05);
+        }
+        
+        .section-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .section-icon {
+            font-size: 22px;
+        }
+        
+        .section-badge {
+            background: var(--accent-royal);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: capitalize;
+        }
+        
+        .section-toggle {
+            color: var(--text-secondary);
+            font-size: 20px;
+            transition: transform 0.3s ease;
+        }
+        
+        .section.collapsed .section-toggle {
+            transform: rotate(-90deg);
+        }
+        
+        .section-content {
+            padding: 25px;
+            display: block;
+        }
+        
+        .section.collapsed .section-content {
+            display: none;
+        }
+        
+        /* ========== COLLAPSIBLE SUB-SECTIONS ========== */
+        .subsection {
+            margin-bottom: 20px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        
+        .subsection-header {
+            background: var(--bg-secondary);
+            padding: 12px 15px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.2s ease;
+        }
+        
+        .subsection-header:hover {
+            background: rgba(74, 158, 255, 0.1);
+        }
+        
+        .subsection-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .subsection-toggle {
+            color: var(--accent-mystical);
+            font-weight: bold;
+            transition: transform 0.3s ease;
+        }
+        
+        .subsection.collapsed .subsection-toggle {
+            transform: rotate(-90deg);
+        }
+        
+        .subsection-content {
+            padding: 15px;
+            display: block;
+        }
+        
+        .subsection.collapsed .subsection-content {
+            display: none;
+        }
+        
+        /* ========== INPUTS ========== */
+        .input-group {
+            margin-bottom: 20px;
+        }
+        
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 13px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+        
+        .input-group input[type="text"],
+        .input-group input[type="password"] {
+            width: 100%;
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 12px 15px;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+        
+        .input-group input:focus {
+            outline: none;
+            border-color: var(--accent-mystical);
+            box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.1);
+        }
+        
+        .input-group input::placeholder {
+            color: var(--text-dim);
+        }
+        
+        .search-input {
+            width: 100%;
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 10px 15px;
+            border-radius: 6px;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+        
+        .search-input::placeholder {
+            color: var(--text-dim);
+        }
+        
+        /* ========== BUTTONS ========== */
+        .btn {
+            padding: 10px 20px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn-primary {
+            background: var(--accent-mystical);
+            color: white;
+            box-shadow: 0 2px 6px rgba(74, 158, 255, 0.3);
+        }
+        
+        .btn-primary:hover {
+            background: #3b82f6;
+            box-shadow: 0 4px 12px rgba(74, 158, 255, 0.4);
+            transform: translateY(-1px);
+        }
+        
+        .btn-secondary {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+        
+        .btn-secondary:hover {
+            background: var(--bg-card);
+            border-color: var(--accent-mystical);
+        }
+        
+        .btn-success {
+            background: var(--accent-success);
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #059669;
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        /* ========== CHECKBOX ========== */
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        
+        .checkbox-group input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+        
+        .checkbox-group label {
+            color: var(--text-primary);
+            font-size: 14px;
+            cursor: pointer;
+        }
+        
+        /* ========== STATUS BADGE ========== */
+        .status-message {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            border-radius: 6px;
+            font-size: 13px;
+            margin-top: 10px;
+        }
+        
+        .status-message.error {
+            background: rgba(220, 38, 38, 0.1);
+            border: 1px solid rgba(220, 38, 38, 0.3);
+            color: #fca5a5;
+        }
+        
+        .status-message.success {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: #6ee7b7;
+        }
+        
+        .status-message.warning {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            color: #fcd34d;
+        }
+        
+        /* ========== BATCH CARD (Sample) ========== */
+        .batch-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-left: 3px solid var(--accent-mystical);
+            border-radius: 6px;
+            padding: 20px;
+            margin-bottom: 15px;
+            transition: all 0.2s ease;
+        }
+        
+        .batch-card:hover {
+            border-left-color: var(--accent-gold);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        
+        .batch-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .progress-bar {
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            height: 24px;
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+            margin: 10px 0;
+        }
+        
+        .progress-fill {
+            background: linear-gradient(90deg, var(--accent-mystical), #60a5fa);
+            height: 100%;
+            transition: width 0.5s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .progress-fill::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            animation: shimmer 2s infinite;
+        }
+        
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+        
+        .progress-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 12px;
+            font-weight: 600;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+        }
+        
+        .workflow-status {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .workflow-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+        
+        /* ========== CHARACTER & OREF STYLES ========== */
+        .character-card {
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            transition: all 0.2s ease;
+        }
+        
+        .character-card:hover {
+            border-color: var(--accent-mystical);
+            background: rgba(74, 158, 255, 0.05);
+        }
+        
+        .character-info {
+            flex: 1;
+        }
+        
+        .character-name {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+        
+        .character-description {
+            font-size: 12px;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+        
+        .oref-upload-area {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .oref-preview {
+            width: 60px;
+            height: 60px;
+            border-radius: 4px;
+            object-fit: cover;
+            border: 2px solid var(--border-color);
+        }
+        
+        .upload-btn {
+            background: var(--accent-mystical);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .upload-btn:hover {
+            background: #3b82f6;
+            box-shadow: 0 2px 8px rgba(74, 158, 255, 0.4);
+        }
+        
+        .upload-btn:disabled {
+            background: var(--text-dim);
+            cursor: not-allowed;
+        }
+        
+        .combo-card {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(74, 158, 255, 0.1));
+            border: 1px solid var(--accent-royal);
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 12px;
+        }
+        
+        .combo-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .combo-characters {
+            font-weight: 600;
+            color: var(--accent-royal);
+        }
+        
+        .combo-count {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+        
+        .prompt-match-card {
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-left: 3px solid var(--accent-mystical);
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 12px;
+        }
+        
+        .prompt-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 10px;
+        }
+        
+        .prompt-row {
+            font-size: 12px;
+            color: var(--text-dim);
+            font-weight: 600;
+        }
+        
+        .prompt-text {
+            color: var(--text-primary);
+            font-size: 13px;
+            line-height: 1.5;
+            margin-bottom: 12px;
+            padding: 10px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 4px;
+        }
+        
+        .match-suggestion {
+            background: rgba(139, 92, 246, 0.1);
+            border: 1px solid var(--accent-royal);
+            border-radius: 4px;
+            padding: 10px;
+            margin-bottom: 8px;
+        }
+        
+        .match-type {
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        
+        .match-exact {
+            color: var(--accent-success);
+        }
+        
+        .match-suggested {
+            color: var(--accent-gold);
+        }
+        
+        .match-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        
+        .btn-approve {
+            background: var(--accent-success);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        
+        .btn-reject {
+            background: var(--accent-crimson);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        
+        .btn-success {
+            background: var(--accent-success);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .btn-success:hover {
+            background: #059669;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+        }
+        
+        /* ========== PLACEHOLDER ========== */
+        .placeholder {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-secondary);
+        }
+        
+        .placeholder-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+        
+        .placeholder h4 {
+            color: var(--text-primary);
+            font-size: 16px;
+            margin-bottom: 8px;
+        }
+        
+        .placeholder p {
+            font-size: 13px;
+            line-height: 1.6;
+        }
+        
+        /* ========== RESPONSIVE ========== */
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+            
+            .filters-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .filter-group select {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <!-- Header -->
+        <header class="header">
+            <h1 class="header-title">
+                <span>⚔️</span>
+                <span>Grimm Automation Dashboard</span>
+            </h1>
+            
+            <div style="display: flex; align-items: center; gap: 20px;">
+                <button class="clear-cache-btn">Clear Cache & Refresh</button>
+                <div class="status-indicator">
+                    <span class="status-dot"></span>
+                    <span>Checking connection...</span>
+                </div>
+            </div>
+        </header>
+        
+        <!-- Filters Bar -->
+        <div class="filters-bar">
+            <div class="filter-group">
+                <label>Status:</label>
+                <select>
+                    <option>All Stories</option>
+                    <option>Complete</option>
+                    <option>In Progress</option>
+                    <option>Not Started</option>
+                </select>
+            </div>
+            
+            <div class="filter-group">
+                <label>Date:</label>
+                <select>
+                    <option>All Time</option>
+                    <option>This Week</option>
+                    <option>This Month</option>
+                    <option>Last 7 Days</option>
+                </select>
+            </div>
+            
+            <div class="filter-group">
+                <label>Show:</label>
+                <select>
+                    <option>Recent (Last 3)</option>
+                    <option>All Stories</option>
+                    <option>Favorites</option>
+                </select>
+            </div>
+            
+            <div class="loading-text">
+                Loading recent stories...
+            </div>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="content">
+            <!-- Configuration Section -->
+            <section class="section collapsed">
+                <div class="section-header" onclick="toggleSection(this)">
+                    <div class="section-title">
+                        <span>Configuration</span>
+                        <span class="section-badge">Setup</span>
+                    </div>
+                    <span class="section-toggle">▼</span>
+                </div>
+                <div class="section-content">
+                    <div class="input-group">
+                        <label>Google API Key</label>
+                        <input type="password" placeholder="Enter your Google API Key" id="apiKeyInput">
+                    </div>
+                    
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn btn-primary" onclick="saveApiKey()">Save Key</button>
+                        <button class="btn btn-secondary" onclick="testConnection()">Test Connection</button>
+                    </div>
+                    
+                    <div class="status-message error" id="apiStatus">
+                        <span>🔴</span>
+                        <span>API key not configured</span>
+                    </div>
+                    
+                    <div style="border-top: 1px solid var(--border-color); margin: 25px 0; padding-top: 25px;">
+                        <div class="input-group">
+                            <label>OpenAI API Key</label>
+                            <p style="font-size: 13px; color: var(--text-secondary); margin: 5px 0 10px 0;">Required for character detection in prompts. Can be switched to Claude API later.</p>
+                            <input type="password" placeholder="Enter your OpenAI API key (sk-...)" id="openaiKeyInput">
+                        </div>
+                        
+                        <div style="display: flex; gap: 10px; margin-top: 10px;">
+                            <button class="btn btn-primary" onclick="saveOpenAIKey()">Save Key</button>
+                            <button class="btn btn-secondary" onclick="testOpenAIConnection()">Test Connection</button>
+                        </div>
+                        
+                        <div class="status-message error" id="openaiApiStatus" style="display: none;">
+                            <span>🔴</span>
+                            <span>OpenAI API key not configured</span>
+                        </div>
+                    </div>
+                    
+                    <div style="border-top: 1px solid var(--border-color); margin: 25px 0; padding-top: 25px;">
+                        <div class="input-group">
+                            <label>Force Post Script URL (Tab 5)</label>
+                            <p style="font-size: 13px; color: var(--text-secondary); margin: 5px 0 10px 0;">Your Google Apps Script web app URL to trigger Force Post. Deploy your script as a web app and paste the URL here.</p>
+                            <input type="text" placeholder="https://script.google.com/macros/s/.../exec" id="forcePostUrlInput">
+                        </div>
+                        
+                        <div style="display: flex; gap: 10px; margin-top: 10px;">
+                            <button class="btn btn-primary" onclick="saveForcePostUrl()">Save URL</button>
+                            <button class="btn btn-secondary" onclick="testForcePostConnection()">Test Connection</button>
+                        </div>
+                        
+                        <div class="status-message error" id="forcePostStatus" style="display: none;">
+            <span>🔴</span>
+                            <span>Force Post URL not configured</span>
+                        </div>
+                    </div>
+                    
+                    <div style="border-top: 1px solid var(--border-color); margin: 25px 0; padding-top: 25px;">
+                        <div class="input-group">
+                            <label>Oref Upload Script URL (Tab 2)</label>
+                            <p style="font-size: 13px; color: var(--text-secondary); margin: 5px 0 10px 0;">Your Google Apps Script web app URL to upload oref images to Drive. Deploy the OrefUploadWebApp script and paste the URL here.</p>
+                            <input type="text" placeholder="https://script.google.com/macros/s/.../exec" id="orefUploadUrlInput">
+                        </div>
+                        
+                        <div style="display: flex; gap: 10px; margin-top: 10px;">
+                            <button class="btn btn-primary" onclick="saveOrefUploadUrl()">Save URL</button>
+                            <button class="btn btn-secondary" onclick="testOrefUploadConnection()">Test Connection</button>
+                        </div>
+                        
+                        <div class="status-message error" id="orefUploadStatus" style="display: none;">
+                            <span>🔴</span>
+                            <span>Oref Upload URL not configured</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Tab 1: Automation Tracker -->
+            <section class="section collapsed">
+                <div class="section-header" onclick="toggleSection(this)">
+                    <div class="section-title">
+                        <span class="section-icon">🏰</span>
+                        <span>Step 1: Make.com Automation Tracker</span>
+                        <span class="section-badge">Batches</span>
+                    </div>
+                    <span class="section-toggle">▼</span>
+                </div>
+                <div class="section-content">
+                    <input type="text" class="search-input" placeholder="Search stories..." id="tab1SearchInput">
+                    
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="showAll">
+                        <label for="showAll">Show all stories</label>
+                        <span class="loading-text" style="margin-left: 20px;">Loading...</span>
+                    </div>
+                    
+                    <div style="margin-top: 20px;">
+                        <button class="btn btn-secondary" id="tab1RefreshBtn">Refresh Status</button>
+                    </div>
+                    
+                    <h3 style="margin-top: 30px; margin-bottom: 15px; font-size: 16px; color: var(--text-primary);">Workflow Status</h3>
+                    
+                    <!-- Batch cards will be loaded here dynamically -->
+                    <div id="batchContainer">
+                        <!-- Sample Batch Card (will be replaced) -->
+                        <div class="batch-card">
+                            <div class="batch-title">
+                                <span>📖</span>
+                                <span>Loading batches...</span>
+                            </div>
+                            
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: 0%">
+                                    <span class="progress-text">Connecting to Google Sheets...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Tab 2: Oref Character System -->
+            <section class="section collapsed">
+                <div class="section-header" onclick="toggleSection(this)">
+                    <div class="section-title">
+                        <span class="section-icon">📚</span>
+                        <span>Step 2: Oref Character System</span>
+                        <span class="section-badge">Characters</span>
+                    </div>
+                    <span class="section-toggle">▼</span>
+                </div>
+                <div class="section-content">
+                    <!-- Story Selection -->
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; margin-bottom: 8px; color: var(--text-secondary); font-weight: 500;">Select Story:</label>
+                        
+                        <!-- Search Box -->
+                        <input type="text" id="tab2StorySearch" placeholder="Search stories..." onkeyup="filterTab2Stories()" style="width: 100%; padding: 10px 12px; background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 6px; font-size: 14px; margin-bottom: 10px;">
+                        
+                        <!-- Recent Stories (Quick Select) -->
+                        <div id="tab2RecentStories" style="margin-bottom: 10px;">
+                            <div style="font-size: 12px; color: var(--text-dim); margin-bottom: 6px;">Recent Stories:</div>
+                            <div id="tab2RecentButtons" style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                <span style="color: var(--text-dim); font-size: 13px;">Loading...</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Full Story Dropdown -->
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <select id="tab2StorySelect" onchange="loadCharactersForStory()" style="flex: 1; background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-primary); padding: 10px 12px; border-radius: 6px; font-size: 14px;">
+                                <option value="">-- Or select from all stories --</option>
+                            </select>
+                            <span id="tab2BatchId" style="color: var(--text-dim); font-size: 13px; font-family: monospace; white-space: nowrap;">Batch ID: --</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Character List - Collapsible -->
+                    <div class="subsection">
+                        <div class="subsection-header" onclick="toggleSubsection(this)">
+                            <div class="subsection-title">
+                                <span>👤</span>
+                                <span>Detected Characters & Oref Images</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <button class="btn btn-secondary" onclick="event.stopPropagation(); addManualCharacter()" style="font-size: 12px; padding: 4px 10px;">+ Add Character</button>
+                                <span class="subsection-toggle">▼</span>
+                            </div>
+                        </div>
+                        <div class="subsection-content">
+                            <div id="characterList">
+                                <div class="placeholder">
+                                    <div class="placeholder-icon">📚</div>
+                                    <p>Select a story above to load characters</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Multi-Character Combos - Collapsible -->
+                    <div class="subsection">
+                        <div class="subsection-header" onclick="toggleSubsection(this)">
+                            <div class="subsection-title">
+                                <span>🔗</span>
+                                <span>Multi-Character Combos</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <button class="btn btn-secondary" onclick="event.stopPropagation(); addManualCombo()" style="font-size: 12px; padding: 4px 10px;">+ Add Combo</button>
+                                <span class="subsection-toggle">▼</span>
+                            </div>
+                        </div>
+                        <div class="subsection-content">
+                            <div id="comboList">
+                                <div class="placeholder">
+                                    <div class="placeholder-icon">🔗</div>
+                                    <p>AI will detect character combinations in prompts</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Prompt Matching - Collapsible -->
+                    <div class="subsection">
+                        <div class="subsection-header" onclick="toggleSubsection(this)">
+                            <div class="subsection-title">
+                                <span>🎯</span>
+                                <span>Prompt Matching (Sheet C)</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <button class="btn btn-primary" onclick="event.stopPropagation(); forceRescan()" style="font-size: 12px; padding: 4px 10px;">🔄 Re-Scan</button>
+                                <button class="btn btn-success" onclick="event.stopPropagation(); generateFinalPrompts()" style="font-size: 12px; padding: 4px 10px;">💾 Generate → Col I</button>
+                                <span class="subsection-toggle">▼</span>
+                            </div>
+                        </div>
+                        <div class="subsection-content">
+                            <div id="promptMatchingList">
+                                <div class="placeholder">
+                                    <div class="placeholder-icon">🎯</div>
+                                    <p>Click "Scan" to detect characters in your prompts</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Prompts Viewer - Collapsible -->
+                    <div class="subsection collapsed">
+                        <div class="subsection-header" onclick="toggleSubsection(this)">
+                            <div class="subsection-title">
+                                <span>📜</span>
+                                <span>View All Prompts (Sheet C)</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <button class="btn btn-secondary" onclick="event.stopPropagation(); loadPromptsForStory();" style="font-size: 12px; padding: 4px 10px;">🔄 Load Prompts</button>
+                                <span class="subsection-toggle">▼</span>
+                            </div>
+                        </div>
+                        <div class="subsection-content">
+                            <div id="promptsList">
+                                <div class="placeholder">
+                                    <div class="placeholder-icon">📜</div>
+                                    <p>Click "Load Prompts" to view all prompts for this story</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Tab 3: Prompt Queue -->
+            <section class="section collapsed">
+                <div class="section-header" onclick="toggleSection(this)">
+                    <div class="section-title">
+                        <span class="section-icon">📜</span>
+                        <span>Step 3: Prompt Queue</span>
+                        <span class="section-badge">Prompts</span>
+                    </div>
+                    <span class="section-toggle">▼</span>
+                </div>
+                <div class="section-content">
+                    <div class="placeholder">
+                        <div class="placeholder-icon">📜</div>
+                        <h4>Prompt Queue</h4>
+                        <p>Copy prompts one-at-a-time to Midjourney with keyboard shortcuts<br>and floating window mode.</p>
+                        <p style="margin-top: 10px;"><strong>Coming in Phase 3</strong></p>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Tab 4: Global Search -->
+            <section class="section collapsed">
+                <div class="section-header" onclick="toggleSection(this)">
+                    <div class="section-title">
+                        <span class="section-icon">🔍</span>
+                        <span>Step 4: Global Search</span>
+                        <span class="section-badge">Search</span>
+                    </div>
+                    <span class="section-toggle">▼</span>
+                </div>
+                <div class="section-content">
+                    <div style="margin-bottom: 15px; display: flex; flex-wrap: wrap; gap: 15px; font-size: 12px;">
+                        <a href="https://docs.google.com/spreadsheets/d/1V0UGF0VJH8xo18FP5daQnTLiC9AVw7oznpwPYg8pANM/edit" target="_blank" style="color: var(--accent-mystical); text-decoration: none;">🔗 Weekly Calendar</a>
+                        <a href="https://docs.google.com/spreadsheets/d/1X3IxPDRi78CFdmpoOgSAaZ6q7C_jYM0sdiFswwvfMVk/edit" target="_blank" style="color: var(--accent-mystical); text-decoration: none;">🔗 Posting Queue</a>
+                        <a href="https://docs.google.com/spreadsheets/d/1imO5dWALe6aoq-wTgu9sKt4BZ9Nzb3l7D6SrORWb9z0/edit" target="_blank" style="color: var(--accent-mystical); text-decoration: none;">🔗 Story Sheet</a>
+                        <a href="https://docs.google.com/spreadsheets/d/1toxRlo3Fj22exja0HwdjWVpVFsDlVTz7AoHAZiCTBzg/edit" target="_blank" style="color: var(--accent-mystical); text-decoration: none;">🔗 Canva Uploader</a>
+                        <a href="https://docs.google.com/spreadsheets/d/1Qs9Gy9lpY6-Xz_VkJ6Y7JHJ3wUviiuXCGOovKM43BUQ/edit" target="_blank" style="color: var(--accent-mystical); text-decoration: none;">🔗 Image Catalogue</a>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label>Search Term</label>
+                        <input type="text" id="globalSearchInput" placeholder="Enter search term..." style="background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-primary); padding: 12px 15px; border-radius: 6px; font-size: 14px; width: 100%;">
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <div class="input-group">
+                            <label>Filter by Sheet (optional)</label>
+                            <select id="sheetFilter" style="background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-primary); padding: 10px 12px; border-radius: 6px; font-size: 14px; width: 100%;">
+                                <option value="all">All Sheets</option>
+                                <option value="Weekly Calendar">Weekly Calendar</option>
+                                <option value="Posting Queue">Posting Queue</option>
+                                <option value="Story Sheet (A)">Story Sheet (A)</option>
+                                <option value="Story Sheet (C)">Story Sheet (C)</option>
+                                <option value="Canva Uploader">Canva Uploader</option>
+                                <option value="Image Catalogue">Image Catalogue</option>
+                            </select>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label>Filter by Column (optional)</label>
+                            <select id="columnFilter" style="background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-primary); padding: 10px 12px; border-radius: 6px; font-size: 14px; width: 100%;">
+                                <option value="all">All Columns</option>
+                                <option value="A">Column A (Story Names)</option>
+                                <option value="B">Column B</option>
+                                <option value="C">Column C</option>
+                                <option value="D">Column D</option>
+                                <option value="E">Column E</option>
+                                <option value="F">Column F</option>
+                                <option value="G">Column G</option>
+                                <option value="H">Column H</option>
+                                <option value="I">Column I</option>
+                                <option value="J">Column J</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label>OR: Get All Rows for a Story</label>
+                        <div style="display: flex; gap: 10px;">
+                            <select id="storyNameFilter" style="background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-primary); padding: 10px 12px; border-radius: 6px; font-size: 14px; flex: 1;">
+                                <option value="">Select a story...</option>
+                            </select>
+                            <button class="btn btn-secondary" onclick="searchByStoryName()" style="white-space: nowrap;">📖 Get Story Rows</button>
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; gap: 10px; margin-top: 15px;">
+                        <button class="btn btn-primary" onclick="performGlobalSearch()">🔍 Search</button>
+                        <button class="btn btn-secondary" onclick="exportSearchResults()">📥 Export to CSV</button>
+                        <span id="searchResultsCount" style="color: var(--text-secondary); align-self: center; margin-left: 10px;">Ready to search</span>
+                    </div>
+                    
+                    <div class="status-message info" id="searchStatus" style="display: none; margin-top: 15px;">
+                        <span>Enter a search term and click Search</span>
+                    </div>
+                    
+                    <div id="searchResultsContainer">
+                        <div class="placeholder">
+                            <div class="placeholder-icon">🔍</div>
+                            <h4>Global Search</h4>
+                            <p>Search across all 5 spreadsheets at once.<br>Enter a term above and click Search.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Tab 5: Schedule Viewer -->
+            <section class="section collapsed">
+                <div class="section-header" onclick="toggleSection(this)">
+                    <div class="section-title">
+                        <span class="section-icon">📅</span>
+                        <span>Step 5: Schedule Viewer</span>
+                        <span class="section-badge">Schedule</span>
+                    </div>
+                    <span class="section-toggle">▼</span>
+                </div>
+                <div class="section-content">
+                    <div style="margin-bottom: 15px;">
+                        <a href="https://docs.google.com/spreadsheets/d/1X3IxPDRi78CFdmpoOgSAaZ6q7C_jYM0sdiFswwvfMVk/edit" target="_blank" style="color: var(--accent-mystical); text-decoration: none; font-size: 13px;">
+                            🔗 Open Posting Queue Spreadsheet →
+                        </a>
+                    </div>
+                    
+                    <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 15px; flex-wrap: wrap;">
+                        <button class="btn btn-primary" onclick="loadSchedule()">📅 Load Schedule</button>
+                        <input type="text" id="scheduleSearchInput" placeholder="Search stories..." onkeyup="searchScheduleStories()" style="background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-primary); padding: 10px 12px; border-radius: 6px; font-size: 14px; flex: 1; min-width: 200px;">
+                        <select id="scheduleStoryFilter" onchange="filterScheduleByStory()" style="background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-primary); padding: 10px 12px; border-radius: 6px; font-size: 14px; min-width: 200px;">
+                            <option value="">All Stories (Recent 3)</option>
+                        </select>
+                    </div>
+                    
+                    <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 20px; flex-wrap: wrap;">
+                        <button class="btn btn-secondary" onclick="exportScheduleToCSV()">📥 Export to CSV</button>
+                        <button class="btn btn-secondary" onclick="exportScheduleToJSON()">📥 Export to JSON</button>
+                        <span id="scheduleCount" style="color: var(--text-secondary); margin-left: 10px;">Ready to load</span>
+                    </div>
+                    
+                    <div class="status-message info" id="scheduleStatus" style="display: none;">
+                        <span>Click "Load Schedule" to view posting schedule</span>
+                    </div>
+                    
+                    <div id="scheduleContainer">
+                        <div class="placeholder">
+                            <div class="placeholder-icon">📅</div>
+                            <h4>Schedule Viewer</h4>
+                            <p>View posting schedule from Posting Queue.<br>Click "Load Schedule" above to begin.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Tab 6: Video Generation -->
+            <section class="section collapsed">
+                <div class="section-header" onclick="toggleSection(this)">
+                    <div class="section-title">
+                        <span class="section-icon">🎬</span>
+                        <span>Step 6: Video Generation</span>
+                        <span class="section-badge" style="background: var(--text-dim);">Future</span>
+                    </div>
+                    <span class="section-toggle">▼</span>
+                </div>
+                <div class="section-content">
+                    <div class="placeholder">
+                        <div class="placeholder-icon">🎬</div>
+                        <h4>Video Generation</h4>
+                        <p>Automated video creation with FFmpeg,<br>Ken Burns effects, and audio mixing.</p>
+                        <p style="margin-top: 10px;"><strong>Deferred - Future Phase</strong></p>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Tab 7: Auto-Crop -->
+            <section class="section collapsed">
+                <div class="section-header" onclick="toggleSection(this)">
+                    <div class="section-title">
+                        <span class="section-icon">🖼️</span>
+                        <span>Step 7: Auto-Crop Tool</span>
+                        <span class="section-badge" style="background: var(--text-dim);">Future</span>
+                    </div>
+                    <span class="section-toggle">▼</span>
+                </div>
+                <div class="section-content">
+                    <div class="placeholder">
+                        <div class="placeholder-icon">🖼️</div>
+                        <h4>Auto-Crop Tool</h4>
+                        <p>Automatically crop images to 1:1 aspect ratio<br>perfect for Midjourney orefs.</p>
+                        <p style="margin-top: 10px;"><strong>Deferred - Future Phase</strong></p>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+    
+    <script>
+        // ========== GLOBAL CONFIGURATION ==========
+        const SPREADSHEET_IDS = {
+            WEEKLY_CALENDAR: '1V0UGF0VJH8xo18FP5daQnTLiC9AVw7oznpwPYg8pANM',
+            POSTING_QUEUE: '1X3IxPDRi78CFdmpoOgSAaZ6q7C_jYM0sdiFswwvfMVk',
+            STORY_SHEET: '1imO5dWALe6aoq-wTgu9sKt4BZ9Nzb3l7D6SrORWb9z0',
+            CANVA_UPLOADER: '1toxRlo3Fj22exja0HwdjWVpVFsDlVTz7AoHAZiCTBzg',
+            IMAGE_CATALOGUE: '1Qs9Gy9lpY6-Xz_VkJ6Y7JHJ3wUviiuXCGOovKM43BUQ'
+        };
 
-// Your Oref folder ID from the handoff document
-const OREF_FOLDER_ID = '1dWnw-eGmCtj14mfT-ualFkI7o5EdMkXE';
+        const DRIVE_FOLDERS = {
+            OREF: '1dWnw-eGmCtj14mfT-ualFkI7o5EdMkXE',
+            NEW_IMAGES_SOURCE: '1rEg36D3cHIVkBFiGuEdMEmBZGkaUkTwW'
+        };
 
-/**
- * Handle POST requests - Upload oref images
- */
-function doPost(e) {
-  try {
-    Logger.log('Received upload request');
-    
-    // Parse the request  
-    let data;
-    try {
-      data = JSON.parse(e.postData.contents);
-    } catch (parseError) {
-      // If JSON parse fails, handle as form data (for no-cors uploads)
-      data = e.parameter || {};
-    }
-    
-    if (data.action === 'uploadOref') {
-      return uploadOrefImage(data);
-    }
-    
-    if (data.action === 'listOrefs') {
-      return listOrefsForStory(data);
-    }
-    
-    return ContentService
-      .createTextOutput(JSON.stringify({
-        success: false,
-        error: 'Unknown action: ' + (data.action || 'none')
-      }))
-      .setMimeType(ContentService.MimeType.JSON);
-      
-  } catch (error) {
-    Logger.log('Error in doPost:', error);
-    
-    return ContentService
-      .createTextOutput(JSON.stringify({
-        success: false,
-        error: error.toString()
-      }))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
+        // ========== UTILITY FUNCTIONS ==========
+        
+        // Show status message
+        function showStatus(message, type = 'error') {
+            const statusDiv = document.getElementById('apiStatus');
+            const icon = type === 'success' ? '✅' : type === 'warning' ? '⚠️' : '🔴';
+            
+            statusDiv.className = `status-message ${type}`;
+            statusDiv.innerHTML = `<span>${icon}</span><span>${message}</span>`;
+        }
+
+        // Update connection indicator
+        function updateConnectionStatus(connected, message = '') {
+            const statusIndicator = document.querySelector('.status-indicator span:last-child');
+            const statusDot = document.querySelector('.status-dot');
+            
+            if (connected) {
+                statusIndicator.textContent = message || 'Connected to Google Sheets';
+                statusDot.style.background = 'var(--accent-success)';
+                statusDot.style.boxShadow = '0 0 8px var(--accent-success)';
+            } else {
+                statusIndicator.textContent = message || 'Not connected';
+                statusDot.style.background = 'var(--text-dim)';
+                statusDot.style.boxShadow = 'none';
+            }
+        }
+
+        // ========== API KEY MANAGEMENT ==========
+        
+        // Load API key on page load
+        function loadApiKey() {
+            const apiKey = localStorage.getItem('googleSheetsApiKey');
+            const apiKeyInput = document.getElementById('apiKeyInput');
+            
+            if (apiKey) {
+                apiKeyInput.value = apiKey;
+                console.log('✅ API key loaded from localStorage');
+                // Auto-test connection
+                setTimeout(testConnection, 500);
+            } else {
+                console.log('⚠️ No API key found in localStorage');
+                showStatus('API key not configured', 'error');
+                updateConnectionStatus(false, 'No API key');
+            }
+        }
+
+        // Save API key
+        function saveApiKey() {
+            const apiKeyInput = document.getElementById('apiKeyInput');
+            const apiKey = apiKeyInput.value.trim();
+            
+            if (!apiKey) {
+                showStatus('Please enter an API key', 'error');
+                return;
+            }
+            
+            // Save to localStorage
+            localStorage.setItem('googleSheetsApiKey', apiKey);
+            console.log('✅ API key saved to localStorage');
+            
+            showStatus('API key saved! Click "Test Connection" to verify.', 'success');
+            
+            // Enable test button
+            const testBtn = document.querySelector('.btn-secondary');
+            testBtn.disabled = false;
+        }
+
+        // Test connection to Google Sheets
+        async function testConnection() {
+            const apiKey = localStorage.getItem('googleSheetsApiKey');
+            
+            if (!apiKey) {
+                showStatus('Please save your API key first', 'error');
+                return;
+            }
+            
+            console.log('🔍 Testing connection to Google Sheets...');
+            updateConnectionStatus(false, 'Testing connection...');
+            showStatus('Testing connection to Google Sheets...', 'warning');
+            
+            try {
+                // Test with Weekly Calendar spreadsheet (first few rows only)
+                const testUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_IDS.WEEKLY_CALENDAR}/values/Weekly%20Calendar!A1:A5?key=${apiKey}`;
+                
+                console.log('📡 Fetching from:', testUrl);
+                
+                const response = await fetch(testUrl);
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    console.error('❌ API Error:', errorData);
+                    
+                    if (response.status === 403) {
+                        showStatus('API key is invalid or does not have permission', 'error');
+                        updateConnectionStatus(false, 'Invalid API key');
+                    } else if (response.status === 404) {
+                        showStatus('Spreadsheet not found - check spreadsheet ID', 'error');
+                        updateConnectionStatus(false, 'Spreadsheet not found');
+                    } else {
+                        showStatus(`Error ${response.status}: ${errorData.error?.message || 'Unknown error'}`, 'error');
+                        updateConnectionStatus(false, 'Connection failed');
+                    }
+                    return;
+                }
+                
+                const data = await response.json();
+                console.log('✅ Connection successful! Data:', data);
+                
+                if (data.values && data.values.length > 0) {
+                    showStatus(`✅ Connected successfully! Found ${data.values.length} rows in Weekly Calendar.`, 'success');
+                    updateConnectionStatus(true, 'Connected to Google Sheets');
+                } else {
+                    showStatus('Connected, but no data found in Weekly Calendar', 'warning');
+                    updateConnectionStatus(true, 'Connected (no data)');
+                }
+                
+            } catch (error) {
+                console.error('❌ Connection error:', error);
+                showStatus(`Connection failed: ${error.message}`, 'error');
+                updateConnectionStatus(false, 'Connection error');
+            }
+        }
+
+        // ========== SECTION TOGGLE ==========
+        function toggleSection(headerElement) {
+            const section = headerElement.parentElement;
+            section.classList.toggle('collapsed');
+        }
+        
+        // Toggle sub-section collapse
+        function toggleSubsection(headerElement) {
+            const subsection = headerElement.parentElement;
+            subsection.classList.toggle('collapsed');
+        }
+
+        // ========== CLEAR CACHE & REFRESH ==========
+        function clearCacheAndRefresh() {
+            console.log('🔄 Clearing cache...');
+            
+            // Clear everything except API keys
+            const apiKey = localStorage.getItem('googleSheetsApiKey');
+            const openaiKey = localStorage.getItem('openaiApiKey');
+            localStorage.clear();
+            if (apiKey) {
+                localStorage.setItem('googleSheetsApiKey', apiKey);
+            }
+            if (openaiKey) {
+                localStorage.setItem('openaiApiKey', openaiKey);
+            }
+            
+            console.log('✅ Cache cleared (API keys preserved)');
+            
+            // Reload page
+            location.reload();
+        }
+
+        // ========== OPENAI API KEY MANAGEMENT ==========
+        
+        function saveOpenAIKey() {
+            const input = document.getElementById('openaiKeyInput');
+            const apiKey = input.value.trim();
+            
+            if (!apiKey) {
+                showOpenAIStatus('error', '⚠️ Please enter an API key');
+                return;
+            }
+            
+            if (!apiKey.startsWith('sk-')) {
+                showOpenAIStatus('error', '⚠️ Invalid OpenAI API key format (should start with sk-)');
+                return;
+            }
+            
+            localStorage.setItem('openaiApiKey', apiKey);
+            console.log('✅ OpenAI API key saved');
+            showOpenAIStatus('success', '✅ OpenAI API key saved successfully');
+        }
+        
+        function loadOpenAIKey() {
+            const savedKey = localStorage.getItem('openaiApiKey');
+            if (savedKey) {
+                document.getElementById('openaiKeyInput').value = savedKey;
+                showOpenAIStatus('success', '✅ OpenAI API key loaded');
+            }
+        }
+        
+        async function testOpenAIConnection() {
+            const apiKey = localStorage.getItem('openaiApiKey');
+            
+            if (!apiKey) {
+                showOpenAIStatus('error', '⚠️ No API key configured');
+                return;
+            }
+            
+            showOpenAIStatus('info', '🔄 Testing connection...');
+            
+            try {
+                const response = await fetch('https://api.openai.com/v1/models', {
+                    headers: {
+                        'Authorization': `Bearer ${apiKey}`
+                    }
+                });
+                
+                if (response.ok) {
+                    showOpenAIStatus('success', '✅ Connected successfully to OpenAI!');
+                } else {
+                    const error = await response.json();
+                    showOpenAIStatus('error', `❌ Connection failed: ${error.error?.message || 'Unknown error'}`);
+                }
+            } catch (error) {
+                console.error('❌ OpenAI connection error:', error);
+                showOpenAIStatus('error', `❌ Connection failed: ${error.message}`);
+            }
+        }
+        
+        function showOpenAIStatus(type, message) {
+            const statusEl = document.getElementById('openaiApiStatus');
+            statusEl.style.display = 'flex';
+            statusEl.className = `status-message ${type}`;
+            
+            const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️';
+            statusEl.innerHTML = `<span>${icon}</span><span>${message}</span>`;
+        }
+
+        // ========== FORCE POST URL MANAGEMENT ==========
+        
+        function saveForcePostUrl() {
+            const input = document.getElementById('forcePostUrlInput');
+            const url = input.value.trim();
+            
+            if (!url) {
+                showForcePostStatus('error', '⚠️ Please enter a URL');
+                return;
+            }
+            
+            if (!url.startsWith('https://script.google.com/')) {
+                showForcePostStatus('error', '⚠️ URL should start with https://script.google.com/');
+                return;
+            }
+            
+            localStorage.setItem('forcePostScriptUrl', url);
+            console.log('✅ Force Post URL saved');
+            showForcePostStatus('success', '✅ Force Post URL saved successfully');
+        }
+        
+        function loadForcePostUrl() {
+            const savedUrl = localStorage.getItem('forcePostScriptUrl');
+            if (savedUrl) {
+                document.getElementById('forcePostUrlInput').value = savedUrl;
+                showForcePostStatus('success', '✅ Force Post URL loaded');
+            }
+        }
+        
+        async function testForcePostConnection() {
+            const url = localStorage.getItem('forcePostScriptUrl');
+            
+            if (!url) {
+                showForcePostStatus('error', '⚠️ No URL configured');
+                return;
+            }
+            
+            showForcePostStatus('info', '🔄 Testing connection...');
+            
+            try {
+                const response = await fetch(url, {
+                    method: 'GET'
+                });
+                
+                if (response.ok) {
+                    const text = await response.text();
+                    showForcePostStatus('success', '✅ Connected successfully! Script is running.');
+                    console.log('Force Post script response:', text);
+                } else {
+                    showForcePostStatus('error', `❌ Connection failed: HTTP ${response.status}`);
+                }
+            } catch (error) {
+                console.error('❌ Force Post connection error:', error);
+                showForcePostStatus('error', `❌ Connection failed: ${error.message}`);
+            }
+        }
+        
+        function showForcePostStatus(type, message) {
+            const statusEl = document.getElementById('forcePostStatus');
+            statusEl.style.display = 'flex';
+            statusEl.className = `status-message ${type}`;
+            
+            const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️';
+            statusEl.innerHTML = `<span>${icon}</span><span>${message}</span>`;
+        }
+
+        // ========== OREF UPLOAD URL MANAGEMENT ==========
+        
+        function saveOrefUploadUrl() {
+            const input = document.getElementById('orefUploadUrlInput');
+            const url = input.value.trim();
+            
+            if (!url) {
+                showOrefUploadStatus('error', '⚠️ Please enter a URL');
+                return;
+            }
+            
+            if (!url.startsWith('https://script.google.com/')) {
+                showOrefUploadStatus('error', '⚠️ URL should start with https://script.google.com/');
+                return;
+            }
+            
+            localStorage.setItem('orefUploadScriptUrl', url);
+            console.log('✅ Oref Upload URL saved');
+            showOrefUploadStatus('success', '✅ Oref Upload URL saved successfully');
+        }
+        
+        function loadOrefUploadUrl() {
+            const savedUrl = localStorage.getItem('orefUploadScriptUrl');
+            if (savedUrl) {
+                document.getElementById('orefUploadUrlInput').value = savedUrl;
+                showOrefUploadStatus('success', '✅ Oref Upload URL loaded');
+            }
+        }
+        
+        async function testOrefUploadConnection() {
+            const url = localStorage.getItem('orefUploadScriptUrl');
+            
+            if (!url) {
+                showOrefUploadStatus('error', '⚠️ No URL configured');
+                return;
+            }
+            
+            showOrefUploadStatus('info', '🔄 Testing connection...');
+            
+            try {
+                const response = await fetch(url, {
+                    method: 'GET'
+                });
+                
+                if (response.ok) {
+                    const text = await response.text();
+                    showOrefUploadStatus('success', '✅ Connected successfully! Script is running.');
+                    console.log('Oref Upload script response:', text);
+                } else {
+                    showOrefUploadStatus('error', `❌ Connection failed: HTTP ${response.status}`);
+                }
+            } catch (error) {
+                console.error('❌ Oref Upload connection error:', error);
+                showOrefUploadStatus('error', `❌ Connection failed: ${error.message}`);
+            }
+        }
+        
+        function showOrefUploadStatus(type, message) {
+            const statusEl = document.getElementById('orefUploadStatus');
+            statusEl.style.display = 'flex';
+            statusEl.className = `status-message ${type}`;
+            
+            const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️';
+            statusEl.innerHTML = `<span>${icon}</span><span>${message}</span>`;
+        }
+
+        // ========== TAB 2: CHARACTER & OREF SYSTEM ==========
+        
+        let currentStory = null;
+        let currentBatchId = null;
+        let characterList = [];
+        let characterOrefs = {}; // {characterName: {fileUrl, driveUrl}}
+        let comboOrefs = {}; // {combo: {fileUrl, driveUrl}}
+        let promptMatches = []; // Array of {row, prompt, matches, suggestions}
+        let allTab2Stories = []; // Store all stories for search/filter
+        
+        // Load story names from Story Sheet (Sheet A) Column A
+        // NOTE: Renamed to loadTab2StoryNames to avoid conflict with Tab 4's loadStoryNames
+        async function loadTab2StoryNames() {
+            const apiKey = localStorage.getItem('googleSheetsApiKey');
+            
+            console.log('=== LOADING TAB 2 STORIES ===');
+            console.log('API Key exists:', !!apiKey);
+            
+            if (!apiKey) {
+                console.log('❌ No API key - cannot load Tab 2 stories');
+                return;
+            }
+            
+            try {
+                console.log('📚 Loading stories from Story Sheet (Sheet A)...');
+                console.log('Spreadsheet ID:', SPREADSHEET_IDS.STORY_SHEET);
+                
+                // Load from Sheet A - Character descriptions
+                // Note: Sheet name contains "/" - we encode the name then wrap in single quotes (unencoded)
+                const sheetNameRaw = "Midjounrey Ready character/object description_A";
+                const encodedRange = `'${encodeURIComponent(sheetNameRaw)}'!A:D`;
+                const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_IDS.STORY_SHEET}/values/${encodedRange}?key=${apiKey}`;
+                
+                console.log('Fetching URL:', url.replace(apiKey, 'API_KEY_HIDDEN'));
+                
+                const response = await fetch(url);
+                console.log('Response status:', response.status, response.statusText);
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    console.error('❌ API Error:', errorData);
+                    alert('Error loading stories from Sheet A: ' + (errorData.error?.message || 'Unknown error'));
+                    return;
+                }
+                
+                const data = await response.json();
+                
+                const rows = data.values || [];
+                console.log(`📊 Loaded ${rows.length} total rows from Sheet A`);
+                console.log('First 5 rows:', rows.slice(0, 5));
+                
+                // Get unique story names from Column A (skip header and empty rows)
+                const uniqueStories = [...new Set(
+                    rows
+                        .slice(1) // Skip row 0 (header row)
+                        .map(row => row[0])
+                        .filter(name => name && name.trim() !== '' && name.trim().toUpperCase() !== 'STORY TITLE')
+                )];
+                
+                console.log(`✅ Found ${uniqueStories.length} unique stories`);
+                console.log('Stories:', uniqueStories);
+                
+                if (uniqueStories.length === 0) {
+                    console.log('⚠️ No stories found in Sheet A Column A');
+                    const container = document.getElementById('tab2RecentButtons');
+                    if (container) {
+                        container.innerHTML = '<span style="color: var(--accent-crimson); font-size: 13px;">⚠️ No stories found in Sheet A</span>';
+                    }
+                    return;
+                }
+                
+                // Store stories (most recent = last in list, so reverse)
+                allTab2Stories = uniqueStories
+                    .map(story => ({ 
+                        story, 
+                        batchId: null
+                    }))
+                    .reverse();
+                
+                console.log('All Tab2 Stories array:', allTab2Stories);
+                
+                // Populate full dropdown (alphabetically)
+                const select = document.getElementById('tab2StorySelect');
+                if (!select) {
+                    console.error('❌ Could not find #tab2StorySelect element!');
+                    return;
+                }
+                
+                select.innerHTML = '<option value="">-- Or select from all stories --</option>';
+                
+                uniqueStories
+                    .sort((a, b) => a.localeCompare(b))
+                    .forEach(story => {
+                        const option = document.createElement('option');
+                        option.value = story;
+                        option.textContent = story;
+                        select.appendChild(option);
+                        console.log('Added dropdown option:', story);
+                    });
+                
+                console.log('✅ Dropdown populated with', select.options.length - 1, 'stories');
+                
+                // Show 3 most recent as quick-select buttons
+                const buttonContainer = document.getElementById('tab2RecentButtons');
+                if (!buttonContainer) {
+                    console.error('❌ Could not find #tab2RecentButtons element!');
+                    return;
+                }
+                
+                displayRecentStories();
+                console.log('✅ Recent stories buttons displayed');
+                
+                console.log(`✅ Tab 2 story loading complete - ${uniqueStories.length} stories loaded`);
+            } catch (error) {
+                console.error('❌ Error loading story names:', error);
+                alert('Error loading Tab 2 stories: ' + error.message);
+            }
+        }
+        
+        // Display 3 most recent stories as quick-select buttons
+        function displayRecentStories() {
+            const container = document.getElementById('tab2RecentButtons');
+            const recent3 = allTab2Stories.slice(0, 3);
+            
+            if (recent3.length === 0) {
+                container.innerHTML = '<span style="color: var(--text-dim); font-size: 13px;">No stories found</span>';
+                return;
+            }
+            
+            container.innerHTML = recent3.map(item => `
+                <button class="btn btn-secondary" onclick="selectStoryFromButton('${item.story.replace(/'/g, "\\'")}', null)" style="font-size: 13px; padding: 8px 16px;">
+                    ${item.story}
+                </button>
+            `).join('');
+        }
+        
+        // Select story from quick-select button
+        function selectStoryFromButton(storyName, batchId) {
+            const select = document.getElementById('tab2StorySelect');
+            select.value = storyName;
+            
+            currentStory = storyName;
+            currentBatchId = batchId;
+            
+            // Look up batch ID from Weekly Calendar if needed
+            if (!batchId) {
+                lookupBatchId(storyName);
+            } else {
+                document.getElementById('tab2BatchId').textContent = `Batch ID: ${batchId}`;
+            }
+            
+            loadCharactersForStory();
+        }
+        
+        // Look up Batch ID from Weekly Calendar for a story
+        async function lookupBatchId(storyName) {
+            const apiKey = localStorage.getItem('googleSheetsApiKey');
+            if (!apiKey) return;
+            
+            try {
+                const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_IDS.WEEKLY_CALENDAR}/values/${encodeURIComponent('Weekly Calendar')}!A:AU?key=${apiKey}`;
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                const rows = data.values || [];
+                
+                // Find first matching story
+                for (const row of rows) {
+                    if (row[0] === storyName && row[46]) { // Column A = story, Column AU = batch ID
+                        currentBatchId = row[46];
+                        document.getElementById('tab2BatchId').textContent = `Batch ID: ${row[46]}`;
+                        return;
+                    }
+                }
+                
+                document.getElementById('tab2BatchId').textContent = 'Batch ID: Not found';
+            } catch (error) {
+                console.error('❌ Error looking up batch ID:', error);
+                document.getElementById('tab2BatchId').textContent = 'Batch ID: Error';
+            }
+        }
+        
+        // Filter stories by search text
+        function filterTab2Stories() {
+            const searchText = document.getElementById('tab2StorySearch').value.toLowerCase();
+            const select = document.getElementById('tab2StorySelect');
+            
+            // Clear and rebuild dropdown with filtered results
+            select.innerHTML = '<option value="">-- Or select from all stories --</option>';
+            
+            const filtered = allTab2Stories.filter(item => 
+                item.story.toLowerCase().includes(searchText)
+            );
+            
+            filtered.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item.story;
+                option.textContent = item.story;
+                select.appendChild(option);
+            });
+            
+            // Update status
+            if (searchText && filtered.length === 0) {
+                select.innerHTML = '<option value="">No stories match your search</option>';
+            }
+        }
+        
+        // Load characters for selected story
+        async function loadCharactersForStory() {
+            const select = document.getElementById('tab2StorySelect');
+            
+            if (!select.value) {
+                document.getElementById('characterList').innerHTML = `
+                    <div class="placeholder">
+                        <div class="placeholder-icon">📚</div>
+                        <p>Select a story above to load characters</p>
+                    </div>
+                `;
+                document.getElementById('tab2BatchId').textContent = 'Batch ID: --';
+                return;
+            }
+            
+            currentStory = select.value;
+            
+            const apiKey = localStorage.getItem('googleSheetsApiKey');
+            if (!apiKey) {
+                alert('Please configure Google API key first');
+                return;
+            }
+            
+            console.log(`📚 Loading characters for story: ${currentStory}`);
+            
+            try {
+                // Load from Sheet A - Column C has character names
+                // Note: Sheet name contains "/" - encode name, wrap in unencoded single quotes
+                const sheetNameRaw = "Midjounrey Ready character/object description_A";
+                const encodedRange = `'${encodeURIComponent(sheetNameRaw)}'!A:D`;
+                const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_IDS.STORY_SHEET}/values/${encodedRange}?key=${apiKey}`;
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                const rows = data.values || [];
+                
+                // Filter for current story (Column A) and extract character names from Column C
+                characterList = rows
+                    .filter(row => row[0] === currentStory && row[2]) // Column A = story, Column C = character name
+                    .map(row => ({
+                        name: row[2], // Column C - Character name
+                        description: row[3] || '' // Column D - Description (optional)
+                    }));
+                
+                console.log(`✅ Found ${characterList.length} characters`);
+                
+                // Load any saved oref URLs from localStorage
+                loadOrefsFromLocalStorage();
+                
+                displayCharacters();
+                
+                // Auto-scan prompts if not already scanned for this story
+                autoScanIfNeeded();
+                
+            } catch (error) {
+                console.error('❌ Error loading characters:', error);
+                alert('Error loading characters: ' + error.message);
+            }
+        }
+        
+        // Auto-scan prompts if not already done for this story
+        async function autoScanIfNeeded() {
+            const scanKey = `scanned_${currentStory}`;
+            const alreadyScanned = localStorage.getItem(scanKey);
+            
+            if (alreadyScanned) {
+                console.log(`📋 Loading saved scan results for ${currentStory}`);
+                // Load saved results
+                const savedMatches = localStorage.getItem(`matches_${currentStory}`);
+                if (savedMatches) {
+                    try {
+                        promptMatches = JSON.parse(savedMatches);
+                        console.log(`✅ Loaded ${promptMatches.length} saved prompt matches`);
+                        displayPromptMatches();
+                        detectAndDisplayCombos();
+                    } catch (e) {
+                        console.error('Error loading saved matches:', e);
+                        // Force re-scan
+                        localStorage.removeItem(scanKey);
+                        autoScanIfNeeded();
+                    }
+                }
+                return;
+            }
+            
+            // Check if OpenAI key is configured
+            const openaiKey = localStorage.getItem('openaiApiKey');
+            if (!openaiKey) {
+                console.log('⚠️ OpenAI key not configured - skipping auto-scan');
+                document.getElementById('promptMatchingList').innerHTML = `
+                    <div class="placeholder">
+                        <div class="placeholder-icon">🔑</div>
+                        <p>Configure OpenAI API key in Configuration to enable auto-scan</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            console.log(`🔍 Auto-scanning prompts for ${currentStory}...`);
+            
+            // Show loading state
+            document.getElementById('promptMatchingList').innerHTML = `
+                <div class="placeholder">
+                    <div class="placeholder-icon">⏳</div>
+                    <p>Scanning prompts for characters... This may take a minute.</p>
+                </div>
+            `;
+            document.getElementById('comboList').innerHTML = `
+                <div class="placeholder">
+                    <div class="placeholder-icon">⏳</div>
+                    <p>Detecting combos...</p>
+                </div>
+            `;
+            
+            // Run the scan
+            await scanPromptsForCharacters();
+            
+            // Mark as scanned and save results
+            localStorage.setItem(scanKey, 'true');
+            localStorage.setItem(`matches_${currentStory}`, JSON.stringify(promptMatches));
+            console.log(`💾 Saved scan results for ${currentStory}`);
+        }
+        
+        // Force a re-scan (clears saved results)
+        async function forceRescan() {
+            if (!currentStory) {
+                alert('Please select a story first');
+                return;
+            }
+            
+            // Clear saved scan data
+            localStorage.removeItem(`scanned_${currentStory}`);
+            localStorage.removeItem(`matches_${currentStory}`);
+            
+            console.log(`🔄 Forcing re-scan for ${currentStory}`);
+            await autoScanIfNeeded();
+        }
+        
+        // Display character cards
+        function displayCharacters() {
+            const container = document.getElementById('characterList');
+            
+            if (characterList.length === 0) {
+                container.innerHTML = `
+                    <div class="placeholder">
+                        <div class="placeholder-icon">📚</div>
+                        <p>No characters found for this story in Sheet A</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = characterList.map(char => {
+                const hasOref = characterOrefs[char.name];
+                return `
+                    <div class="character-card">
+                        <div class="character-info">
+                            <div class="character-name">${char.name}</div>
+                            <div class="character-description">${char.description}</div>
+                        </div>
+                        <div class="oref-upload-area">
+                            ${hasOref ? `<img src="${hasOref.fileUrl}" class="oref-preview" alt="${char.name}">` : ''}
+                            <input type="file" id="file-${char.name.replace(/\s+/g, '_')}" accept="image/*" style="display: none;" onchange="handleOrefUpload(\`${char.name.replace(/'/g, "\\'")}\`, this)">
+                            <button class="upload-btn" onclick="document.getElementById('file-${char.name.replace(/\s+/g, '_')}').click()">
+                                ${hasOref ? '✓ Change' : '📤 Upload'} Oref
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        // Handle oref image upload
+        async function handleOrefUpload(characterName, inputElement) {
+            const file = inputElement.files[0];
+            if (!file) return;
+            
+            console.log(`📤 Uploading oref for ${characterName}`);
+            
+            // Check if upload URL is configured
+            const uploadUrl = localStorage.getItem('orefUploadScriptUrl');
+            if (!uploadUrl) {
+                alert('Please configure the Oref Upload Script URL in the Configuration tab first.');
+                return;
+            }
+            
+            // Create file preview URL
+            const fileUrl = URL.createObjectURL(file);
+            
+            // Store temporary preview
+            characterOrefs[characterName] = {
+                fileUrl: fileUrl,
+                driveUrl: null,
+                file: file,
+                uploading: true
+            };
+            
+            // Re-display characters with uploading indicator
+            displayCharacters();
+            
+            // Upload to Drive
+            await uploadOrefToDrive(characterName, file);
+        }
+        
+        // Upload oref to Google Drive via Apps Script
+        async function uploadOrefToDrive(characterName, file) {
+            const uploadUrl = localStorage.getItem('orefUploadScriptUrl');
+            
+            if (!uploadUrl) {
+                console.error('❌ No upload URL configured');
+                alert('Please configure the Oref Upload Script URL in Configuration first.');
+                return;
+            }
+            
+            try {
+                console.log(`📤 Uploading ${characterName} oref to Drive folder: ${currentStory} - ${currentBatchId}`);
+                
+                // Convert file to base64
+                const base64Data = await fileToBase64(file);
+                
+                // Use FormData for the upload
+                const formData = new FormData();
+                formData.append('action', 'uploadOref');
+                formData.append('storyName', currentStory);
+                formData.append('batchId', currentBatchId || '');
+                formData.append('characterName', characterName);
+                formData.append('fileName', file.name);
+                formData.append('imageData', base64Data);
+                
+                // Upload to Apps Script (works from GitHub Pages, not local file)
+                const response = await fetch(uploadUrl, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    console.log(`✅ Oref uploaded successfully: ${result.url}`);
+                    
+                    // Update with Drive URL automatically
+                    characterOrefs[characterName] = {
+                        fileUrl: characterOrefs[characterName]?.fileUrl || result.url,
+                        driveUrl: result.url,
+                        file: file,
+                        uploading: false
+                    };
+                    
+                    // Save to localStorage
+                    saveOrefsToLocalStorage();
+                    
+                    displayCharacters();
+                    
+                    alert(`✅ Oref uploaded!\n\nCharacter: ${characterName}\nDrive URL saved automatically.`);
+                } else {
+                    throw new Error(result.error || 'Upload failed');
+                }
+                
+            } catch (error) {
+                console.error('❌ Error uploading oref:', error);
+                
+                if (characterOrefs[characterName]) {
+                    characterOrefs[characterName].uploading = false;
+                    characterOrefs[characterName].error = true;
+                }
+                
+                displayCharacters();
+                alert(`❌ Failed to upload oref: ${error.message}`);
+            }
+        }
+        
+        // Save manually entered Drive URL
+        function saveOrefUrl(characterName, url) {
+            // Convert various Drive URL formats to direct view URL
+            let directUrl = url.trim();
+            
+            // Handle: https://drive.google.com/file/d/FILE_ID/view
+            const fileMatch = url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
+            if (fileMatch) {
+                directUrl = `https://drive.google.com/uc?export=view&id=${fileMatch[1]}`;
+            }
+            
+            // Handle: https://drive.google.com/open?id=FILE_ID
+            const openMatch = url.match(/drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/);
+            if (openMatch) {
+                directUrl = `https://drive.google.com/uc?export=view&id=${openMatch[1]}`;
+            }
+            
+            console.log(`💾 Saving Drive URL for ${characterName}: ${directUrl}`);
+            
+            // Store URL
+            if (!characterOrefs[characterName]) {
+                characterOrefs[characterName] = {};
+            }
+            characterOrefs[characterName].driveUrl = directUrl;
+            if (!characterOrefs[characterName].fileUrl) {
+                characterOrefs[characterName].fileUrl = directUrl;
+            }
+            
+            // Save to localStorage
+            saveOrefsToLocalStorage();
+            
+            displayCharacters();
+            console.log(`✅ Drive URL saved for ${characterName}`);
+        }
+        
+        // Save orefs to localStorage for persistence
+        function saveOrefsToLocalStorage() {
+            if (!currentStory) return;
+            
+            const key = `orefs_${currentStory}_${currentBatchId || 'default'}`;
+            const data = {};
+            
+            for (const [name, oref] of Object.entries(characterOrefs)) {
+                if (oref.driveUrl && oref.driveUrl !== '(uploaded - check Drive)') {
+                    data[name] = oref.driveUrl;
+                }
+            }
+            
+            localStorage.setItem(key, JSON.stringify(data));
+            console.log(`💾 Saved ${Object.keys(data).length} oref URLs to localStorage`);
+        }
+        
+        // Load orefs from localStorage
+        function loadOrefsFromLocalStorage() {
+            if (!currentStory) return;
+            
+            const key = `orefs_${currentStory}_${currentBatchId || 'default'}`;
+            const saved = localStorage.getItem(key);
+            
+            if (saved) {
+                try {
+                    const data = JSON.parse(saved);
+                    for (const [name, url] of Object.entries(data)) {
+                        if (!characterOrefs[name]) {
+                            characterOrefs[name] = {};
+                        }
+                        characterOrefs[name].driveUrl = url;
+                        if (!characterOrefs[name].fileUrl) {
+                            characterOrefs[name].fileUrl = url; // Use Drive URL as preview
+                        }
+                    }
+                    console.log(`📂 Loaded ${Object.keys(data).length} oref URLs from localStorage`);
+                } catch (e) {
+                    console.error('Error loading orefs from localStorage:', e);
+                }
+            }
+        }
+        
+        // Convert file to base64
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+        
+        // Add manual character
+        function addManualCharacter() {
+            const name = prompt('Enter character name:');
+            if (!name) return;
+            
+            characterList.push({
+                name: name.trim(),
+                description: '(Manually added)'
+            });
+            
+            displayCharacters();
+        }
+        
+        // Add manual combo
+        function addManualCombo() {
+            const combo = prompt('Enter character combo (e.g., "Briar Rose + Prince"):');
+            if (!combo) return;
+            
+            // TODO: Add combo management
+            alert('Combo management coming soon!');
+        }
+        
+        // Scan prompts for character matches
+        async function scanPromptsForCharacters() {
+            if (!currentStory) {
+                alert('Please select a story first');
+                return;
+            }
+            
+            const openaiKey = localStorage.getItem('openaiApiKey');
+            if (!openaiKey) {
+                alert('Please configure OpenAI API key first');
+                return;
+            }
+            
+            const apiKey = localStorage.getItem('googleSheetsApiKey');
+            
+            console.log(`🔍 Scanning prompts for ${currentStory}...`);
+            
+            try {
+                // Load prompts from Sheet C
+                // Note: Sheet name contains "/" - encode name, wrap in unencoded single quotes
+                const sheetNameRaw = "Midjounrey Ready character/object description_C";
+                const encodedRange = `'${encodeURIComponent(sheetNameRaw)}'!A:I`;
+                const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_IDS.STORY_SHEET}/values/${encodedRange}?key=${apiKey}`;
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                const rows = data.values || [];
+                
+                // Filter for current story
+                const storyPrompts = rows
+                    .map((row, index) => ({
+                        row: index + 1,
+                        story: row[0],
+                        prompt: row[1], // Column B
+                        existingOref: row[8] // Column I
+                    }))
+                    .filter(p => p.story === currentStory && p.prompt);
+                
+                console.log(`Found ${storyPrompts.length} prompts to scan`);
+                
+                // Batch scan ALL prompts in ONE API call to avoid rate limits
+                console.log(`🔍 Batch scanning ${storyPrompts.length} prompts...`);
+                
+                document.getElementById('promptMatchingList').innerHTML = `
+                    <div class="placeholder">
+                        <div class="placeholder-icon">⏳</div>
+                        <p>Analyzing ${storyPrompts.length} prompts for characters...<br>This may take 30-60 seconds.</p>
+                    </div>
+                `;
+                
+                promptMatches = await batchDetectCharacters(storyPrompts, openaiKey);
+                
+                displayPromptMatches();
+                
+                // Detect and display combos (prompts with 2+ characters)
+                detectAndDisplayCombos();
+                
+            } catch (error) {
+                console.error('❌ Error scanning prompts:', error);
+                alert('Error scanning prompts: ' + error.message);
+            }
+        }
+        
+        // Detect multi-character combos from scan results
+        function detectAndDisplayCombos() {
+            const combos = {};
+            
+            // Find prompts with multiple characters
+            promptMatches.forEach(p => {
+                const chars = p.matches.filter(m => m.confidence === 'exact' || m.confidence === 'likely');
+                if (chars.length >= 2) {
+                    // Create a combo key (sorted names)
+                    const comboKey = chars.map(c => c.name).sort().join(' + ');
+                    if (!combos[comboKey]) {
+                        combos[comboKey] = {
+                            characters: chars.map(c => c.name),
+                            prompts: []
+                        };
+                    }
+                    combos[comboKey].prompts.push(p.row);
+                }
+            });
+            
+            const comboList = Object.entries(combos);
+            console.log(`✅ Found ${comboList.length} character combos`);
+            
+            // Display combos
+            const container = document.getElementById('comboList');
+            
+            if (comboList.length === 0) {
+                container.innerHTML = `
+                    <div class="placeholder">
+                        <div class="placeholder-icon">🔗</div>
+                        <p>No multi-character combos detected. Run "Scan" first.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = comboList.map(([comboName, combo]) => {
+                const hasOref = comboOrefs[comboName];
+                return `
+                    <div class="character-card">
+                        <div class="character-info">
+                            <div class="character-name">${comboName}</div>
+                            <div class="character-description">Found in ${combo.prompts.length} prompt(s): Rows ${combo.prompts.join(', ')}</div>
+                        </div>
+                        <div class="oref-upload-area">
+                            ${hasOref?.fileUrl ? `<img src="${hasOref.fileUrl}" class="oref-preview" alt="${comboName}">` : ''}
+                            <input type="file" id="combo-file-${comboName.replace(/[^a-zA-Z0-9]/g, '_')}" accept="image/*" style="display: none;" 
+                                onchange="handleComboOrefUpload('${comboName.replace(/'/g, "\\'")}', this)">
+                            <button class="upload-btn" onclick="document.getElementById('combo-file-${comboName.replace(/[^a-zA-Z0-9]/g, '_')}').click()">
+                                ${hasOref?.fileUrl ? '✓ Change' : '📤 Upload'} Combo Oref
+                            </button>
+                            ${hasOref?.driveUrl ? `<div style="font-size: 11px; color: var(--accent-success); margin-top: 4px;">✅ Drive URL saved</div>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        // Handle combo oref upload
+        async function handleComboOrefUpload(comboName, inputElement) {
+            const file = inputElement.files[0];
+            if (!file) return;
+            
+            console.log(`📤 Uploading combo oref for ${comboName}`);
+            
+            const uploadUrl = localStorage.getItem('orefUploadScriptUrl');
+            if (!uploadUrl) {
+                alert('Please configure the Oref Upload Script URL in Configuration first.');
+                return;
+            }
+            
+            // Preview
+            const fileUrl = URL.createObjectURL(file);
+            comboOrefs[comboName] = { fileUrl: fileUrl, driveUrl: null, file: file };
+            detectAndDisplayCombos();
+            
+            // Upload
+            try {
+                const base64Data = await fileToBase64(file);
+                
+                const formData = new FormData();
+                formData.append('action', 'uploadOref');
+                formData.append('storyName', currentStory);
+                formData.append('batchId', currentBatchId || '');
+                formData.append('characterName', comboName.replace(/ \+ /g, '_AND_'));
+                formData.append('fileName', file.name);
+                formData.append('imageData', base64Data);
+                
+                const response = await fetch(uploadUrl, { method: 'POST', body: formData });
+                const result = await response.json();
+                
+                if (result.success) {
+                    console.log(`✅ Combo oref uploaded: ${result.url}`);
+                    comboOrefs[comboName].driveUrl = result.url;
+                    saveOrefsToLocalStorage();
+                    alert(`✅ Combo oref uploaded!\n\n${comboName}\nDrive URL saved automatically.`);
+                } else {
+                    throw new Error(result.error || 'Upload failed');
+                }
+                
+                detectAndDisplayCombos();
+                
+            } catch (error) {
+                console.error('❌ Error uploading combo oref:', error);
+                alert(`Failed to upload combo oref: ${error.message}`);
+            }
+        }
+        
+        // Batch detect characters in ALL prompts with ONE API call
+        async function batchDetectCharacters(storyPrompts, openaiKey) {
+            const characterNames = characterList.map(c => c.name);
+            
+            // Build a numbered list of prompts
+            const promptList = storyPrompts.map((p, i) => `${i + 1}. ${p.prompt}`).join('\n\n');
+            
+            try {
+                const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${openaiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: 'gpt-3.5-turbo-16k',
+                        messages: [{
+                            role: 'system',
+                            content: `You are a character detection assistant. You will analyze multiple prompts and identify which characters from a given list appear in each prompt.
+
+Characters to look for: ${characterNames.join(', ')}
+
+For each prompt, detect:
+- Exact matches (character name appears directly)
+- Likely matches (generic terms like "the dog", "the old man" that clearly refer to a specific character)
+
+RESPOND ONLY WITH A VALID JSON OBJECT in this exact format:
+{
+  "1": [{"name": "character_name", "confidence": "exact"}],
+  "2": [{"name": "char1", "confidence": "exact"}, {"name": "char2", "confidence": "likely"}],
+  "3": []
 }
 
-/**
- * Handle GET requests - includes listOrefs to avoid CORS preflight
- */
-function doGet(e) {
-  try {
-    const action = e.parameter.action;
-    
-    if (action === 'listOrefs') {
-      return listOrefsForStory(e.parameter);
-    }
-    
-    return ContentService
-      .createTextOutput('Oref Upload Web App is running. Upload via POST, list via GET.')
-      .setMimeType(ContentService.MimeType.TEXT);
-      
-  } catch (error) {
-    Logger.log('Error in doGet:', error);
-    
-    return ContentService
-      .createTextOutput(JSON.stringify({
-        success: false,
-        error: error.toString()
-      }))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
-}
+Where the keys are prompt numbers and values are arrays of detected characters. Use empty array [] if no characters found.`
+                        }, {
+                            role: 'user',
+                            content: `Analyze these ${storyPrompts.length} prompts and identify which characters appear in each:\n\n${promptList}`
+                        }],
+                        temperature: 0.2,
+                        max_tokens: 4000
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    console.error('OpenAI API error:', data.error);
+                    throw new Error(data.error.message || 'OpenAI API error');
+                }
+                
+                if (!data.choices || !data.choices[0]) {
+                    console.error('Invalid OpenAI response:', data);
+                    throw new Error('Invalid response from OpenAI');
+                }
+                
+                let content = data.choices[0].message.content.trim();
+                console.log('Raw OpenAI response:', content.substring(0, 500) + '...');
+                
+                // Try to extract JSON
+                const jsonMatch = content.match(/\{[\s\S]*\}/);
+                if (jsonMatch) {
+                    content = jsonMatch[0];
+                }
+                
+                const results = JSON.parse(content);
+                console.log('Parsed results:', results);
+                
+                // Map results back to prompts
+                return storyPrompts.map((p, i) => {
+                    const key = String(i + 1);
+                    const matches = results[key] || [];
+                    return {
+                        ...p,
+                        matches: Array.isArray(matches) ? matches : []
+                    };
+                });
+                
+            } catch (error) {
+                console.error('❌ Error in batch detection:', error);
+                alert(`Error scanning prompts: ${error.message}\n\nTry again or check your OpenAI API key.`);
+                return storyPrompts.map(p => ({ ...p, matches: [] }));
+            }
+        }
+        
+        // Detect characters in prompt using OpenAI (kept for single prompt use)
+        async function detectCharactersInPrompt(prompt, openaiKey) {
+            const characterNames = characterList.map(c => c.name);
+            
+            try {
+                const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${openaiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: 'gpt-3.5-turbo',
+                        messages: [{
+                            role: 'system',
+                            content: `You are a character detection assistant. Given a prompt and a list of character names, identify which characters appear in the prompt. Also detect if generic terms (like "princess", "prince", "king") refer to specific characters based on context.
 
-/**
- * Upload oref image to Google Drive
- */
-function uploadOrefImage(data) {
-  try {
-    const storyName = data.storyName;
-    const batchId = data.batchId;
-    const characterName = data.characterName;
-    const imageData = data.imageData; // Base64 encoded image
-    const fileName = data.fileName;
-    
-    Logger.log('Uploading oref for:', characterName, 'in story:', storyName);
-    
-    // Get or create story folder
-    const storyFolderName = batchId ? `${storyName} - ${batchId}` : storyName;
-    const storyFolder = getOrCreateFolder(OREF_FOLDER_ID, storyFolderName);
-    
-    Logger.log('Story folder:', storyFolder.getName(), 'ID:', storyFolder.getId());
-    
-    // Decode base64 image
-    const imageBlob = Utilities.newBlob(
-      Utilities.base64Decode(imageData.split(',')[1]), // Remove data:image/png;base64, prefix
-      'image/png',
-      sanitizeFileName(characterName) + '.png'
-    );
-    
-    // Check if file already exists and delete it
-    const existingFiles = storyFolder.getFilesByName(imageBlob.getName());
-    while (existingFiles.hasNext()) {
-      const existingFile = existingFiles.next();
-      Logger.log('Deleting existing file:', existingFile.getName());
-      existingFile.setTrashed(true);
-    }
-    
-    // Create the file
-    const file = storyFolder.createFile(imageBlob);
-    Logger.log('File created:', file.getName());
-    
-    // Make file publicly accessible
-    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-    
-    // Get public URL
-    const publicUrl = `https://drive.google.com/uc?export=view&id=${file.getId()}`;
-    
-    Logger.log('Public URL:', publicUrl);
-    
-    return ContentService
-      .createTextOutput(JSON.stringify({
-        success: true,
-        url: publicUrl,
-        fileId: file.getId(),
-        fileName: file.getName(),
-        folderName: storyFolder.getName()
-      }))
-      .setMimeType(ContentService.MimeType.JSON);
-      
-  } catch (error) {
-    Logger.log('Error uploading oref:', error);
-    
-    return ContentService
-      .createTextOutput(JSON.stringify({
-        success: false,
-        error: error.toString()
-      }))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
-}
+IMPORTANT: You MUST respond with ONLY a valid JSON array, no other text. Example:
+[{"name": "sultan", "confidence": "exact", "reasoning": "directly mentioned"}]
 
-/**
- * Get or create a folder
- */
-function getOrCreateFolder(parentFolderId, folderName) {
-  const parentFolder = DriveApp.getFolderById(parentFolderId);
-  
-  // Check if folder exists
-  const folders = parentFolder.getFoldersByName(folderName);
-  
-  if (folders.hasNext()) {
-    return folders.next();
-  }
-  
-  // Create new folder
-  return parentFolder.createFolder(folderName);
-}
+If no characters found, respond with: []`
+                        }, {
+                            role: 'user',
+                            content: `Characters: ${characterNames.join(', ')}\n\nPrompt: ${prompt}`
+                        }],
+                        temperature: 0.3
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (!data.choices || !data.choices[0]) {
+                    console.error('Invalid OpenAI response:', data);
+                    return [];
+                }
+                
+                let content = data.choices[0].message.content.trim();
+                
+                // Try to extract JSON if wrapped in markdown code blocks
+                const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
+                if (jsonMatch) {
+                    content = jsonMatch[1].trim();
+                }
+                
+                // Try to find JSON array in the response
+                const arrayMatch = content.match(/\[[\s\S]*\]/);
+                if (arrayMatch) {
+                    content = arrayMatch[0];
+                }
+                
+                // Parse JSON response
+                try {
+                    const matches = JSON.parse(content);
+                    return Array.isArray(matches) ? matches : [];
+                } catch (parseError) {
+                    console.warn('Could not parse OpenAI response as JSON:', content);
+                    return [];
+                }
+                
+            } catch (error) {
+                console.error('❌ Error detecting characters:', error);
+                return [];
+            }
+        }
+        
+        // Display prompt matches
+        function displayPromptMatches() {
+            const container = document.getElementById('promptMatchingList');
+            
+            if (promptMatches.length === 0) {
+                container.innerHTML = `
+                    <div class="placeholder">
+                        <div class="placeholder-icon">🎯</div>
+                        <p>No prompts found or scan not run yet</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = promptMatches.map(p => {
+                const exactMatches = p.matches.filter(m => m.confidence === 'exact');
+                const suggestions = p.matches.filter(m => m.confidence !== 'exact');
+                
+                return `
+                    <div class="prompt-match-card">
+                        <div class="prompt-header">
+                            <span class="prompt-row">Row ${p.row}</span>
+                        </div>
+                        <div class="prompt-text">${p.prompt}</div>
+                        
+                        ${exactMatches.length > 0 ? `
+                            <div class="match-suggestion">
+                                <div class="match-type match-exact">✅ Exact Matches: ${exactMatches.map(m => m.name).join(', ')}</div>
+                            </div>
+                        ` : ''}
+                        
+                        ${suggestions.map(s => `
+                            <div class="match-suggestion">
+                                <div class="match-type match-suggested">🤔 Suggested: ${s.name}</div>
+                                <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">${s.reasoning}</div>
+                                <div class="match-actions">
+                                    <button class="btn-approve" onclick="approveMatch(${p.row}, '${s.name}')">✓ Approve</button>
+                                    <button class="btn-reject" onclick="rejectMatch(${p.row}, '${s.name}')">✗ Reject</button>
+                                    <input type="text" placeholder="Or type character name..." style="padding: 6px; background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 4px; font-size: 12px;">
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        // Approve match
+        function approveMatch(row, characterName) {
+            console.log(`✅ Approved: Row ${row} - ${characterName}`);
+            // TODO: Store approval and update prompt
+        }
+        
+        // Reject match
+        function rejectMatch(row, characterName) {
+            console.log(`❌ Rejected: Row ${row} - ${characterName}`);
+            // TODO: Remove suggestion
+        }
+        
+        // Generate final prompts and write to Column I
+        async function generateFinalPrompts() {
+            if (!currentStory) {
+                alert('Please select a story first');
+                return;
+            }
+            
+            if (promptMatches.length === 0) {
+                alert('Please scan prompts first');
+                return;
+            }
+            
+            // TODO: Generate prompts with --cref URLs and write to Sheet C Column I
+            alert('Generating final prompts... (coming soon)');
+        }
+        
+        // Toggle prompts view section
+        function togglePromptsView() {
+            const content = document.getElementById('promptsViewContent');
+            const icon = document.getElementById('promptsViewIcon');
+            
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                icon.textContent = '▼';
+            } else {
+                content.style.display = 'none';
+                icon.textContent = '▶';
+            }
+        }
+        
+        // Load prompts from Sheet C for current story
+        async function loadPromptsForStory() {
+            if (!currentStory) {
+                alert('Please select a story first');
+                return;
+            }
+            
+            const apiKey = localStorage.getItem('googleSheetsApiKey');
+            if (!apiKey) {
+                alert('Please configure Google API key first');
+                return;
+            }
+            
+            console.log(`📜 Loading prompts for story: ${currentStory}`);
+            
+            try {
+                // Load from Sheet C - Column B has prompts
+                // Note: Sheet name contains "/" - encode name, wrap in unencoded single quotes
+                const sheetNameRaw = "Midjounrey Ready character/object description_C";
+                const encodedRange = `'${encodeURIComponent(sheetNameRaw)}'!A:B`;
+                const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_IDS.STORY_SHEET}/values/${encodedRange}?key=${apiKey}`;
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                const rows = data.values || [];
+                
+                // Filter for current story (Column A) and get prompts from Column B
+                const prompts = rows
+                    .map((row, index) => ({
+                        rowNumber: index + 1,
+                        story: row[0],
+                        prompt: row[1]
+                    }))
+                    .filter(p => p.story === currentStory && p.prompt);
+                
+                console.log(`✅ Found ${prompts.length} prompts`);
+                displayPrompts(prompts);
+                
+            } catch (error) {
+                console.error('❌ Error loading prompts:', error);
+                alert('Error loading prompts: ' + error.message);
+            }
+        }
+        
+        // Display prompts list
+        function displayPrompts(prompts) {
+            const container = document.getElementById('promptsList');
+            
+            if (prompts.length === 0) {
+                container.innerHTML = `
+                    <div class="placeholder">
+                        <div class="placeholder-icon">📜</div>
+                        <p>No prompts found for this story in Sheet C</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = prompts.map((p, index) => `
+                <div style="background: var(--bg-input); border: 1px solid var(--border-color); border-left: 3px solid var(--accent-mystical); border-radius: 6px; padding: 15px; margin-bottom: 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <span style="font-size: 12px; color: var(--text-dim); font-weight: 600;">Prompt #${index + 1} (Row ${p.rowNumber})</span>
+                        <button class="btn btn-secondary" onclick="copyPromptToClipboard(\`${p.prompt.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`)" style="font-size: 11px; padding: 4px 8px;">
+                            📋 Copy
+                        </button>
+                    </div>
+                    <div style="color: var(--text-primary); font-size: 13px; line-height: 1.6; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 4px;">
+                        ${p.prompt}
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // Copy prompt to clipboard
+        function copyPromptToClipboard(prompt) {
+            navigator.clipboard.writeText(prompt).then(() => {
+                console.log('✅ Prompt copied to clipboard');
+                // Could show a toast notification here
+            }).catch(err => {
+                console.error('❌ Failed to copy prompt:', err);
+                alert('Failed to copy prompt to clipboard');
+            });
+        }
 
-/**
- * Sanitize filename - remove special characters
- */
-function sanitizeFileName(name) {
-  return name
-    .replace(/[^a-zA-Z0-9_\-]/g, '_') // Replace special chars with underscore
-    .replace(/_+/g, '_') // Replace multiple underscores with single
-    .replace(/^_|_$/g, ''); // Remove leading/trailing underscores
-}
+        // ========== TAB 5: SCHEDULE VIEWER ==========
+        
+        let scheduleData = [];
+        let allScheduleStories = [];
+        
+        // Load schedule from Posting Queue
+        async function loadSchedule() {
+            const apiKey = localStorage.getItem('googleSheetsApiKey');
+            
+            if (!apiKey) {
+                showScheduleStatus('error', '⚠️ No API key configured');
+                return;
+            }
+            
+            console.log('📅 Loading schedule from Posting Queue...');
+            showScheduleStatus('info', '📅 Loading schedule...');
+            updateScheduleCount('Loading...');
+            
+            try {
+                // Fetch all data from Posting Queue
+                const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_IDS.POSTING_QUEUE}/values/${encodeURIComponent('Posting Queue')}!A:AA?key=${apiKey}`;
+                
+                const response = await fetch(url);
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    console.error('❌ Error loading schedule:', errorData);
+                    showScheduleStatus('error', 'Could not load Posting Queue');
+                    return;
+                }
+                
+                const data = await response.json();
+                const rows = data.values || [];
+                
+                console.log(`📊 Loaded ${rows.length} rows from Posting Queue`);
+                
+                // Filter out header row and empty rows, parse schedule
+                scheduleData = rows
+                    .filter((row, index) => index > 0 && row[0] && row[0].trim() !== '') // Skip row 1 (header) and empty rows
+                    .map((row, index) => ({
+                        storyName: row[0] || '',
+                        postNumber: row[1] || '',
+                        weekNumber: row[2] || '',
+                        weekDateRange: row[3] || '',
+                        day: row[4] || '',
+                        timeSlot: row[5] || '',
+                        scheduledTime: row[6] || '',
+                        imageBatchId: row[7] || '',
+                        slideshowBatchId: row[8] || '',
+                        slideFolderUrl: row[9] || '',
+                        driveFolderId: row[10] || '',
+                        videoUrl: row[11] || '',
+                        youtubeCheckbox: row[17] === '☐' || row[17] === 'TRUE' || row[17] === true,
+                        facebookCheckbox: row[18] === '☐' || row[18] === 'TRUE' || row[18] === true,
+                        tiktokCheckbox: row[19] === '☐' || row[19] === 'TRUE' || row[19] === true,
+                        youtubeStatus: row[20] || '', // Column U - Posted/Pending/empty
+                        facebookStatus: row[21] || '', // Column V
+                        tiktokStatus: row[22] || '', // Column W
+                        rawRow: row,
+                        rowIndex: index + 2 // +2 because we skip header and array is 0-indexed
+                    }));
+                
+                console.log(`✅ Parsed ${scheduleData.length} scheduled posts`);
+                
+                if (scheduleData.length === 0) {
+                    showScheduleStatus('warning', 'No scheduled posts found');
+                    displayScheduleByStory([]);
+                } else {
+                    // Get unique stories for dropdown
+                    allScheduleStories = [...new Set(scheduleData.map(p => p.storyName))].sort();
+                    populateStoryDropdown();
+                    
+                    // Show 3 most recent stories by default
+                    const recentStories = allScheduleStories.slice(-3).reverse();
+                    const recentPosts = scheduleData.filter(p => recentStories.includes(p.storyName));
+                    
+                    showScheduleStatus('success', `✅ Loaded ${scheduleData.length} posts from ${allScheduleStories.length} stories`);
+                    displayScheduleByStory(recentPosts);
+                    updateScheduleCount(`${recentPosts.length} posts (${recentStories.length} stories)`);
+                }
+                
+            } catch (error) {
+                console.error('❌ Error loading schedule:', error);
+                showScheduleStatus('error', `Failed to load schedule: ${error.message}`);
+                updateScheduleCount('Error');
+            }
+        }
+        
+        // Populate story dropdown
+        function populateStoryDropdown() {
+            const dropdown = document.getElementById('scheduleStoryFilter');
+            if (!dropdown) return;
+            
+            dropdown.innerHTML = '<option value="">All Stories (Recent 3)</option>' +
+                allScheduleStories.map(story => `<option value="${story}">${story}</option>`).join('');
+        }
+        
+        // Search stories by name
+        function searchScheduleStories() {
+            const searchTerm = document.getElementById('scheduleSearchInput').value.toLowerCase().trim();
+            
+            if (!searchTerm) {
+                // Show 3 most recent if no search
+                filterScheduleByStory();
+                return;
+            }
+            
+            // Filter stories by search term
+            const matchingStories = allScheduleStories.filter(story => 
+                story.toLowerCase().includes(searchTerm)
+            );
+            
+            if (matchingStories.length === 0) {
+                const container = document.getElementById('scheduleContainer');
+                container.innerHTML = `
+                    <div class="placeholder">
+                        <div class="placeholder-icon">🔍</div>
+                        <h4>No Stories Found</h4>
+                        <p>No stories match "${searchTerm}"</p>
+                    </div>
+                `;
+                updateScheduleCount('0 stories');
+                return;
+            }
+            
+            // Show all matching stories
+            const matchingPosts = scheduleData.filter(p => matchingStories.includes(p.storyName));
+            displayScheduleByStory(matchingPosts);
+            updateScheduleCount(`${matchingPosts.length} posts (${matchingStories.length} stories)`);
+        }
+        
+        // Filter schedule by story
+        function filterScheduleByStory() {
+            const selectedStory = document.getElementById('scheduleStoryFilter').value;
+            
+            // Clear search box when using dropdown
+            document.getElementById('scheduleSearchInput').value = '';
+            
+            if (!selectedStory) {
+                // Show 3 most recent stories (REVERSED - newest first)
+                const recentStories = allScheduleStories.slice(-3).reverse();
+                const recentPosts = scheduleData.filter(p => recentStories.includes(p.storyName));
+                displayScheduleByStory(recentPosts);
+                updateScheduleCount(`${recentPosts.length} posts (${recentStories.length} stories)`);
+            } else {
+                // Show selected story
+                const filteredPosts = scheduleData.filter(p => p.storyName === selectedStory);
+                displayScheduleByStory(filteredPosts);
+                updateScheduleCount(`${filteredPosts.length} posts (1 story)`);
+            }
+        }
+        
+        // Display schedule grouped by story (collapsible)
+        function displayScheduleByStory(posts) {
+            const container = document.getElementById('scheduleContainer');
+            
+            if (!container) {
+                console.error('❌ Schedule container not found');
+                return;
+            }
+            
+            if (posts.length === 0) {
+                container.innerHTML = `
+                    <div class="placeholder">
+                        <div class="placeholder-icon">📅</div>
+                        <h4>No Scheduled Posts</h4>
+                        <p>No posts found in Posting Queue</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Group posts by story
+            const grouped = {};
+            posts.forEach(post => {
+                if (!grouped[post.storyName]) {
+                    grouped[post.storyName] = [];
+                }
+                grouped[post.storyName].push(post);
+            });
+            
+            // Get story names and REVERSE ORDER (newest first)
+            const storyNames = Object.keys(grouped).reverse();
+            
+            // Generate collapsible sections for each story
+            let html = '<div style="margin-top: 20px;">';
+            let storyIndex = 0;
+            
+            storyNames.forEach(storyName => {
+                const storyPosts = grouped[storyName];
+                
+                html += `
+                    <div style="margin-bottom: 15px; border: 1px solid var(--border-color); border-radius: 6px; overflow: hidden;">
+                        <div style="background: var(--bg-secondary); padding: 12px 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center;" onclick="toggleStorySchedule(${storyIndex})">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <span id="story-schedule-icon-${storyIndex}" style="color: var(--accent-mystical); font-weight: bold;">▼</span>
+                                <span style="color: var(--text-primary); font-weight: 600;">📖 ${storyName}</span>
+                            </div>
+                            <span style="color: var(--text-secondary); font-size: 13px;">${storyPosts.length} posts</span>
+                        </div>
+                        <div id="story-schedule-content-${storyIndex}" style="display: block;">
+                            <div style="overflow-x: auto;">
+                                <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                                    <thead>
+                                        <tr style="background: var(--bg-card); border-bottom: 2px solid var(--accent-mystical);">
+                                            <th style="padding: 10px; text-align: left; color: var(--text-primary); font-weight: 600;">Post #</th>
+                                            <th style="padding: 10px; text-align: left; color: var(--text-primary); font-weight: 600;">Scheduled</th>
+                                            <th style="padding: 10px; text-align: left; color: var(--text-primary); font-weight: 600;">Day</th>
+                                            <th style="padding: 10px; text-align: left; color: var(--text-primary); font-weight: 600;">Time Slot</th>
+                                            <th style="padding: 10px; text-align: left; color: var(--text-primary); font-weight: 600;">Drive Folder</th>
+                                            <th style="padding: 10px; text-align: center; color: var(--text-primary); font-weight: 600;">YT</th>
+                                            <th style="padding: 10px; text-align: center; color: var(--text-primary); font-weight: 600;">FB</th>
+                                            <th style="padding: 10px; text-align: center; color: var(--text-primary); font-weight: 600;">TT</th>
+                                            <th style="padding: 10px; text-align: center; color: var(--text-primary); font-weight: 600;">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${storyPosts.map(post => {
+                                            // Determine status badge
+                                            const getStatusBadge = (status) => {
+                                                if (status === 'Posted' || status === 'posted') {
+                                                    return '<span style="background: var(--accent-success); color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: 600;">Posted</span>';
+                                                } else if (status === 'Pending' || status === 'pending') {
+                                                    return '<span style="background: var(--accent-gold); color: var(--bg-primary); padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: 600;">Pending</span>';
+                                                } else {
+                                                    return '<span style="color: var(--text-dim); font-size: 10px;">-</span>';
+                                                }
+                                            };
+                                            
+                                            return `
+                                            <tr style="border-bottom: 1px solid var(--border-color);">
+                                                <td style="padding: 10px; color: var(--text-primary); font-weight: 500;">#${post.postNumber}</td>
+                                                <td style="padding: 10px; color: var(--text-secondary);">${post.scheduledTime}</td>
+                                                <td style="padding: 10px; color: var(--text-secondary);">${post.day}</td>
+                                                <td style="padding: 10px; color: var(--text-secondary);">${post.timeSlot}</td>
+                                                <td style="padding: 10px; color: var(--text-secondary); font-family: monospace; font-size: 10px;">${post.driveFolderId ? post.driveFolderId.substring(0, 12) + '...' : '-'}</td>
+                                                <td style="padding: 10px; text-align: center;">${getStatusBadge(post.youtubeStatus)}</td>
+                                                <td style="padding: 10px; text-align: center;">${getStatusBadge(post.facebookStatus)}</td>
+                                                <td style="padding: 10px; text-align: center;">${getStatusBadge(post.tiktokStatus)}</td>
+                                                <td style="padding: 10px; text-align: center;">
+                                                    <button class="btn btn-secondary" onclick="forcePost(${post.rowIndex}, '${post.storyName}', ${post.postNumber})" style="font-size: 11px; padding: 4px 8px; white-space: nowrap;">
+                                                        ⚡ Force Post
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        `}).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                storyIndex++;
+            });
+            
+            html += '</div>';
+            container.innerHTML = html;
+        }
+        
+        // Toggle story schedule section
+        function toggleStorySchedule(index) {
+            const content = document.getElementById(`story-schedule-content-${index}`);
+            const icon = document.getElementById(`story-schedule-icon-${index}`);
+            
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                icon.textContent = '▼';
+            } else {
+                content.style.display = 'none';
+                icon.textContent = '▶';
+            }
+        }
+        
+        // Export schedule to CSV
+        function exportScheduleToCSV() {
+            if (scheduleData.length === 0) {
+                showScheduleStatus('warning', '⚠️ No schedule data to export');
+                return;
+            }
+            
+            // Create CSV content
+            const headers = ['Story', 'Post #', 'Scheduled Time', 'Day', 'Time Slot', 'Drive Folder ID', 'YouTube Status', 'Facebook Status', 'TikTok Status'];
+            const csvRows = [headers.join(',')];
+            
+            scheduleData.forEach(post => {
+                const row = [
+                    `"${post.storyName.replace(/"/g, '""')}"`,
+                    post.postNumber,
+                    `"${post.scheduledTime.replace(/"/g, '""')}"`,
+                    post.day,
+                    post.timeSlot,
+                    post.driveFolderId,
+                    post.youtubeStatus || '-',
+                    post.facebookStatus || '-',
+                    post.tiktokStatus || '-'
+                ];
+                csvRows.push(row.join(','));
+            });
+            
+            const csvContent = '\uFEFF' + csvRows.join('\n');
+            
+            // Create download
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            
+            link.setAttribute('href', url);
+            link.setAttribute('download', `posting_schedule_${Date.now()}.csv`);
+            link.style.visibility = 'hidden';
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            showScheduleStatus('success', `✅ Exported ${scheduleData.length} posts to CSV`);
+            console.log('✅ Schedule exported to CSV');
+        }
+        
+        // Export schedule to JSON
+        function exportScheduleToJSON() {
+            if (scheduleData.length === 0) {
+                showScheduleStatus('warning', '⚠️ No schedule data to export');
+                return;
+            }
+            
+            // Create JSON content
+            const jsonData = scheduleData.map(post => ({
+                story: post.storyName,
+                postNumber: post.postNumber,
+                scheduledTime: post.scheduledTime,
+                day: post.day,
+                timeSlot: post.timeSlot,
+                driveFolderId: post.driveFolderId,
+                platforms: {
+                    youtube: post.youtubeStatus,
+                    facebook: post.facebookStatus,
+                    tiktok: post.tiktokStatus
+                }
+            }));
+            
+            const jsonContent = JSON.stringify(jsonData, null, 2);
+            
+            // Create download
+            const blob = new Blob([jsonContent], { type: 'application/json' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            
+            link.setAttribute('href', url);
+            link.setAttribute('download', `posting_schedule_${Date.now()}.json`);
+            link.style.visibility = 'hidden';
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            showScheduleStatus('success', `✅ Exported ${scheduleData.length} posts to JSON`);
+            console.log('✅ Schedule exported to JSON');
+        }
+        
+        // Force post - call existing Apps Script function
+        async function forcePost(rowIndex, storyName, postNumber) {
+            const confirmed = confirm(`Are you sure you want to force post:\n\n${storyName} - Post #${postNumber}?\n\nThis will trigger your existing Force Post script.`);
+            
+            if (!confirmed) {
+                return;
+            }
+            
+            console.log(`⚡ Force posting: ${storyName} - Post #${postNumber} (Row ${rowIndex})`);
+            showScheduleStatus('info', `⚡ Triggering Force Post script...`);
+            
+            // Get the Apps Script web app URL from configuration
+            const scriptUrl = localStorage.getItem('forcePostScriptUrl');
+            
+            if (!scriptUrl) {
+                showScheduleStatus('error', '❌ Force Post script URL not configured');
+                alert('Please configure your Force Post Apps Script URL in the Configuration tab.\n\nTo set it up:\n1. Deploy your Apps Script as a web app\n2. Add the URL to localStorage:\nlocalStorage.setItem("forcePostScriptUrl", "YOUR_SCRIPT_URL")');
+                return;
+            }
+            
+            try {
+                // Call the Apps Script web app
+                const response = await fetch(scriptUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        action: 'forcePost',
+                        rowIndex: rowIndex,
+                        storyName: storyName,
+                        postNumber: postNumber
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showScheduleStatus('success', `✅ Force posted: ${storyName} - Post #${postNumber}`);
+                    console.log(`✅ Successfully force posted row ${rowIndex}`);
+                    
+                    // Reload schedule to show updated status
+                    setTimeout(() => {
+                        loadSchedule();
+                    }, 1500);
+                } else {
+                    showScheduleStatus('error', `❌ Force post failed: ${result.error || 'Unknown error'}`);
+                }
+                
+            } catch (error) {
+                console.error('❌ Error calling Force Post script:', error);
+                showScheduleStatus('error', `❌ Failed to call Force Post script: ${error.message}`);
+                
+                // Show helpful error message
+                if (error.message.includes('Failed to fetch') || error.message.includes('CORS')) {
+                    alert('Could not reach the Force Post script.\n\nMake sure:\n1. Your Apps Script is deployed as a web app\n2. Access is set to "Anyone"\n3. The URL is correct in localStorage');
+                }
+            }
+        }
+        
+        // Show schedule status message
+        function showScheduleStatus(type, message) {
+            const statusEl = document.getElementById('scheduleStatus');
+            if (!statusEl) return;
+            
+            statusEl.className = `status-message ${type}`;
+            statusEl.innerHTML = `<span>${message}</span>`;
+            statusEl.style.display = 'flex';
+        }
+        
+        // Update schedule count
+        function updateScheduleCount(text) {
+            const countEl = document.getElementById('scheduleCount');
+            if (countEl) {
+                countEl.textContent = text;
+            }
+        }
 
-/**
- * Test function - run this to verify the script works
- */
-function testOrefUpload() {
-  const testData = {
-    action: 'uploadOref',
-    storyName: 'TEST STORY',
-    batchId: '20250119_120000',
-    characterName: 'test_character',
-    fileName: 'test.png',
-    imageData: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==' // 1x1 red pixel
-  };
-  
-  const mockEvent = {
-    postData: {
-      contents: JSON.stringify(testData)
-    }
-  };
-  
-  const response = doPost(mockEvent);
-  Logger.log('Test response:', response.getContent());
-}
+        // ========== TAB 4: GLOBAL SEARCH ==========
+        
+        let searchResults = [];
+        let currentSearchQuery = '';
+        let storyNames = [];
+        
+        // All spreadsheets to search
+        const SEARCH_SPREADSHEETS = [
+            { 
+                name: 'Weekly Calendar', 
+                id: SPREADSHEET_IDS.WEEKLY_CALENDAR,
+                sheet: 'Weekly%20Calendar'
+            },
+            { 
+                name: 'Posting Queue', 
+                id: SPREADSHEET_IDS.POSTING_QUEUE,
+                sheet: 'Posting%20Queue'
+            },
+            { 
+                name: 'Story Sheet (A)', 
+                id: SPREADSHEET_IDS.STORY_SHEET,
+                sheet: `'${encodeURIComponent("Midjounrey Ready character/object description_A")}'`
+            },
+            { 
+                name: 'Story Sheet (C)', 
+                id: SPREADSHEET_IDS.STORY_SHEET,
+                sheet: `'${encodeURIComponent("Midjounrey Ready character/object description_C")}'`
+            },
+            { 
+                name: 'Canva Uploader', 
+                id: SPREADSHEET_IDS.CANVA_UPLOADER,
+                sheet: `'${encodeURIComponent("Grimm-> Canva Uploader")}'`
+            },
+            { 
+                name: 'Image Catalogue', 
+                id: SPREADSHEET_IDS.IMAGE_CATALOGUE,
+                sheet: 'Image%20Catalogue'
+            }
+        ];
+        
+        // Load story names for Tab 4 Global Search dropdown
+        // NOTE: Renamed to loadTab4StoryNames to avoid conflict with Tab 2's loadTab2StoryNames
+        async function loadTab4StoryNames() {
+            const apiKey = localStorage.getItem('googleSheetsApiKey');
+            if (!apiKey) return;
+            
+            try {
+                const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_IDS.WEEKLY_CALENDAR}/values/Weekly%20Calendar!A:A?key=${apiKey}`;
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data.values) {
+                    // Get unique story names from Column A
+                    const allNames = data.values.map(row => row[0]).filter(name => name && name.trim());
+                    storyNames = [...new Set(allNames)].sort();
+                    
+                    // Populate dropdown
+                    const dropdown = document.getElementById('storyNameFilter');
+                    if (dropdown) {
+                        dropdown.innerHTML = '<option value="">Select a story...</option>' + 
+                            storyNames.map(name => `<option value="${name}">${name}</option>`).join('');
+                    }
+                    
+                    console.log(`✅ Loaded ${storyNames.length} unique story names for Tab 4`);
+                }
+            } catch (error) {
+                console.error('❌ Error loading story names for Tab 4:', error);
+            }
+        }
+        
+        // Search by story name - returns ALL rows for that story
+        async function searchByStoryName() {
+            const apiKey = localStorage.getItem('googleSheetsApiKey');
+            const storyName = document.getElementById('storyNameFilter').value;
+            const filterSheet = document.getElementById('sheetFilter').value;
+            
+            if (!apiKey) {
+                showSearchStatus('error', '⚠️ No API key configured');
+                return;
+            }
+            
+            if (!storyName) {
+                showSearchStatus('warning', '⚠️ Please select a story');
+                return;
+            }
+            
+            currentSearchQuery = storyName;
+            searchResults = [];
+            
+            showSearchStatus('info', `📖 Loading all rows for "${storyName}"...`);
+            updateSearchResultsCount('Searching...');
+            
+            try {
+                // Determine which sheets to search
+                const sheetsToSearch = filterSheet === 'all' 
+                    ? SEARCH_SPREADSHEETS 
+                    : SEARCH_SPREADSHEETS.filter(s => s.name === filterSheet);
+                
+                console.log(`📖 Searching ${sheetsToSearch.length} sheets for story: "${storyName}"`);
+                
+                // Search all sheets in parallel - but only Column A
+                const searchPromises = sheetsToSearch.map(sheet => searchStoryInSheet(sheet, storyName, apiKey));
+                const results = await Promise.all(searchPromises);
+                
+                // Flatten results
+                searchResults = results.flat();
+                
+                console.log(`✅ Found ${searchResults.length} rows for story "${storyName}"`);
+                
+                if (searchResults.length === 0) {
+                    showSearchStatus('warning', `No rows found for "${storyName}"`);
+                    displaySearchResults([]);
+                } else {
+                    showSearchStatus('success', `✅ Found ${searchResults.length} rows for "${storyName}"`);
+                    displayStoryRows(searchResults);
+                }
+                
+                updateSearchResultsCount(`${searchResults.length} rows`);
+                
+            } catch (error) {
+                console.error('❌ Search error:', error);
+                showSearchStatus('error', `Search failed: ${error.message}`);
+                updateSearchResultsCount('Error');
+            }
+        }
+        
+        // Search for story name in a sheet (Column A only)
+        async function searchStoryInSheet(sheetInfo, storyName, apiKey) {
+            try {
+                const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetInfo.id}/values/${sheetInfo.sheet}!A:Z?key=${apiKey}`;
+                
+                const response = await fetch(url);
+                
+                if (!response.ok) {
+                    console.warn(`⚠️ Could not search ${sheetInfo.name}`);
+                    return [];
+                }
+                
+                const data = await response.json();
+                const rows = data.values || [];
+                
+                const results = [];
+                
+                // Only search Column A (index 0) for story name
+                rows.forEach((row, rowIndex) => {
+                    if (row[0] && row[0].toString().trim() === storyName.trim()) {
+                        results.push({
+                            sheet: sheetInfo.name,
+                            row: rowIndex + 1,
+                            fullRow: row,
+                            storyName: storyName
+                        });
+                    }
+                });
+                
+                console.log(`📊 ${sheetInfo.name}: ${results.length} rows for "${storyName}"`);
+                return results;
+                
+            } catch (error) {
+                console.warn(`⚠️ Error searching ${sheetInfo.name}:`, error);
+                return [];
+            }
+        }
+        
+        // Perform global search
+        async function performGlobalSearch() {
+            const apiKey = localStorage.getItem('googleSheetsApiKey');
+            const query = document.getElementById('globalSearchInput').value.trim();
+            const filterSheet = document.getElementById('sheetFilter').value;
+            const filterColumn = document.getElementById('columnFilter').value;
+            
+            if (!apiKey) {
+                showSearchStatus('error', '⚠️ No API key configured');
+                return;
+            }
+            
+            if (!query) {
+                showSearchStatus('warning', '⚠️ Please enter a search term');
+                return;
+            }
+            
+            currentSearchQuery = query.toLowerCase();
+            searchResults = [];
+            
+            showSearchStatus('info', `🔍 Searching for "${query}"...`);
+            updateSearchResultsCount('Searching...');
+            
+            try {
+                // Determine which sheets to search
+                const sheetsToSearch = filterSheet === 'all' 
+                    ? SEARCH_SPREADSHEETS 
+                    : SEARCH_SPREADSHEETS.filter(s => s.name === filterSheet);
+                
+                console.log(`🔍 Searching ${sheetsToSearch.length} sheets for: "${query}"`);
+                
+                // Search all sheets in parallel
+                const searchPromises = sheetsToSearch.map(sheet => searchSheet(sheet, query, apiKey, filterColumn));
+                const results = await Promise.all(searchPromises);
+                
+                // Flatten results
+                searchResults = results.flat();
+                
+                console.log(`✅ Found ${searchResults.length} results`);
+                
+                if (searchResults.length === 0) {
+                    showSearchStatus('warning', `No results found for "${query}"`);
+                    displaySearchResults([]);
+                } else {
+                    showSearchStatus('success', `✅ Found ${searchResults.length} results`);
+                    displaySearchResults(searchResults);
+                }
+                
+                updateSearchResultsCount(`${searchResults.length} results`);
+                
+            } catch (error) {
+                console.error('❌ Search error:', error);
+                showSearchStatus('error', `Search failed: ${error.message}`);
+                updateSearchResultsCount('Error');
+            }
+        }
+        
+        // Search a single sheet
+        async function searchSheet(sheetInfo, query, apiKey, filterColumn = 'all') {
+            try {
+                const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetInfo.id}/values/${sheetInfo.sheet}!A:Z?key=${apiKey}`;
+                
+                const response = await fetch(url);
+                
+                if (!response.ok) {
+                    console.warn(`⚠️ Could not search ${sheetInfo.name}`);
+                    return [];
+                }
+                
+                const data = await response.json();
+                const rows = data.values || [];
+                
+                const queryLower = query.toLowerCase();
+                const results = [];
+                
+                // Determine which columns to search
+                let columnsToSearch = [];
+                if (filterColumn === 'all') {
+                    columnsToSearch = Array.from({ length: 26 }, (_, i) => i); // A-Z (0-25)
+                } else {
+                    columnsToSearch = [filterColumn.charCodeAt(0) - 65]; // Convert A-Z to 0-25
+                }
+                
+                // Search each row
+                rows.forEach((row, rowIndex) => {
+                    columnsToSearch.forEach(colIndex => {
+                        const cell = row[colIndex];
+                        if (cell && cell.toString().toLowerCase().includes(queryLower)) {
+                            results.push({
+                                sheet: sheetInfo.name,
+                                row: rowIndex + 1,
+                                column: String.fromCharCode(65 + colIndex), // A, B, C...
+                                value: cell,
+                                fullRow: row
+                            });
+                        }
+                    });
+                });
+                
+                console.log(`📊 ${sheetInfo.name}: ${results.length} matches`);
+                return results;
+                
+            } catch (error) {
+                console.warn(`⚠️ Error searching ${sheetInfo.name}:`, error);
+                return [];
+            }
+        }
+        
+        // Display story rows (for story name search)
+        function displayStoryRows(results) {
+            const container = document.getElementById('searchResultsContainer');
+            
+            if (!container) {
+                console.error('❌ Search results container not found');
+                return;
+            }
+            
+            if (results.length === 0) {
+                container.innerHTML = `
+                    <div class="placeholder">
+                        <div class="placeholder-icon">📖</div>
+                        <h4>No Rows Found</h4>
+                        <p>No rows found for this story</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Group results by Sheet → Story Name → Row Number (deduplicate)
+            const grouped = {};
+            
+            results.forEach(result => {
+                const storyName = result.storyName;
+                const rowNum = result.row;
+                
+                // Skip header row (Row 1)
+                if (rowNum === 1) return;
+                
+                if (!grouped[result.sheet]) {
+                    grouped[result.sheet] = {};
+                }
+                
+                if (!grouped[result.sheet][storyName]) {
+                    grouped[result.sheet][storyName] = {};
+                }
+                
+                // Only store ONE result per row number (deduplicate)
+                if (!grouped[result.sheet][storyName][rowNum]) {
+                    grouped[result.sheet][storyName][rowNum] = result;
+                }
+            });
+            
+            // Generate HTML
+            let html = '<div style="margin-top: 20px;">';
+            let groupIndex = 0;
+            
+            Object.keys(grouped).forEach(sheetName => {
+                const stories = grouped[sheetName];
+                const storyCount = Object.keys(stories).length;
+                
+                // Count total unique rows
+                let totalRows = 0;
+                Object.values(stories).forEach(storyRows => {
+                    totalRows += Object.keys(storyRows).length;
+                });
+                
+                html += `
+                    <div style="margin-bottom: 15px; border: 1px solid var(--border-color); border-radius: 6px; overflow: hidden;">
+                        <div style="background: var(--bg-secondary); padding: 12px 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center;" onclick="toggleSheetGroup(${groupIndex})">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <span id="sheet-icon-${groupIndex}" style="color: var(--accent-mystical); font-weight: bold;">▶</span>
+                                <span style="color: var(--text-primary); font-weight: 600; font-size: 15px;">${sheetName}</span>
+                            </div>
+                            <span style="color: var(--text-secondary); font-size: 13px;">${storyCount} ${storyCount === 1 ? 'story' : 'stories'}, ${totalRows} ${totalRows === 1 ? 'row' : 'rows'}</span>
+                        </div>
+                        <div id="sheet-content-${groupIndex}" style="display: none;">
+                `;
+                
+                let storyIndex = 0;
+                Object.keys(stories).forEach(storyName => {
+                    const rowsMap = stories[storyName];
+                    const rows = Object.values(rowsMap);
+                    const uniqueId = `${groupIndex}-${storyIndex}`;
+                    
+                    html += `
+                        <div style="border-top: 1px solid var(--border-color);">
+                            <div style="background: var(--bg-card); padding: 10px 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center;" onclick="toggleStoryGroup('${uniqueId}')">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <span id="story-icon-${uniqueId}" style="color: var(--accent-royal); font-weight: bold; margin-left: 20px;">▶</span>
+                                    <span style="color: var(--text-primary); font-weight: 500;">📖 ${storyName}</span>
+                                </div>
+                                <span style="color: var(--text-secondary); font-size: 12px;">${rows.length} ${rows.length === 1 ? 'row' : 'rows'}</span>
+                            </div>
+                            <div id="story-content-${uniqueId}" style="display: none; padding: 15px; background: var(--bg-primary);">
+                    `;
+                    
+                    // Sort rows by row number
+                    rows.sort((a, b) => a.row - b.row);
+                    
+                    rows.forEach((row, rowIndex) => {
+                        const rowId = `${uniqueId}-${rowIndex}`;
+                        
+                        // Get headers - determine based on sheet
+                        let headers = [];
+                        if (sheetName === 'Weekly Calendar') {
+                            headers = ['Story Name', 'Posted TT', 'Posted YT', 'Posted FB', 'Week #', 'Week Date Range', 'Post #', 'Day', 'Time Slot', 'Format ID', 'Format Name', 'Angle', 'Hook Type', 'Status', 'Manual Post?', 'TT Caption', 'FB Caption', 'YT Caption', 'Image 1 URL', 'Slide 1 Text', 'Image 2 URL', 'Slide 2 Text', 'Image 3 URL', 'Slide 3 Text', 'Image 4 URL', 'Slide 4 Text'];
+                        } else if (sheetName === 'Posting Queue') {
+                            headers = ['Story Name', 'Post #', 'Week #', 'Week Date', 'Day', 'Time Slot', 'Scheduled Date', 'YouTube Folder', 'TikTok Folder', 'Drive Folder URL'];
+                        } else {
+                            headers = row.fullRow.map((_, i) => `Column ${String.fromCharCode(65 + i)}`);
+                        }
+                        
+                        html += `
+                            <div style="margin-bottom: 10px; border: 1px solid var(--border-color); border-radius: 4px; overflow: hidden;">
+                                <div style="background: var(--bg-secondary); padding: 8px 12px; cursor: pointer; display: flex; justify-content: space-between; align-items: center;" onclick="toggleRowDetail('${rowId}')">
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <span id="row-icon-${rowId}" style="color: var(--accent-gold); font-weight: bold;">▶</span>
+                                        <span style="color: var(--text-secondary); font-size: 12px;">Row ${row.row}</span>
+                                    </div>
+                                </div>
+                                <div id="row-detail-${rowId}" style="display: none; padding: 12px; background: var(--bg-card);">
+                                    <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                                        <thead>
+                                            <tr style="background: var(--bg-secondary);">
+                                                <th style="padding: 8px; text-align: left; color: var(--accent-mystical); font-weight: 600; border: 1px solid var(--border-color); width: 150px;">Field</th>
+                                                <th style="padding: 8px; text-align: left; color: var(--text-primary); font-weight: 600; border: 1px solid var(--border-color);">Value</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${row.fullRow.map((cell, cellIndex) => {
+                                                const columnLetter = String.fromCharCode(65 + cellIndex);
+                                                const headerName = headers[cellIndex] || `Column ${columnLetter}`;
+                                                
+                                                return `
+                                                <tr>
+                                                    <td style="padding: 8px; color: var(--text-secondary); border: 1px solid var(--border-color); font-weight: 500;">
+                                                        ${headerName}
+                                                        <span style="color: var(--accent-mystical); font-size: 10px; margin-left: 4px;">(${columnLetter})</span>
+                                                    </td>
+                                                    <td style="padding: 8px; color: var(--text-primary); border: 1px solid var(--border-color); word-break: break-word;">${cell || '<span style="color: var(--text-dim);">-</span>'}</td>
+                                                </tr>
+                                            `}).join('')}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    html += `
+                            </div>
+                        </div>
+                    `;
+                    
+                    storyIndex++;
+                });
+                
+                html += `
+                        </div>
+                    </div>
+                `;
+                
+                groupIndex++;
+            });
+            
+            html += '</div>';
+            
+            container.innerHTML = html;
+        }
+        
+        // Display search results
+        function displaySearchResults(results) {
+            const container = document.getElementById('searchResultsContainer');
+            
+            if (!container) {
+                console.error('❌ Search results container not found');
+                return;
+            }
+            
+            if (results.length === 0) {
+                container.innerHTML = `
+                    <div class="placeholder">
+                        <div class="placeholder-icon">🔍</div>
+                        <h4>No Results Found</h4>
+                        <p>Try a different search term or check all sheets</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Group results by Sheet → Story Name → Row Number (deduplicate)
+            const grouped = {};
+            
+            results.forEach(result => {
+                const storyName = result.fullRow[0] || 'Unknown Story'; // Column A = Story Name
+                const rowNum = result.row;
+                
+                // Skip header row (Row 1)
+                if (rowNum === 1) return;
+                
+                if (!grouped[result.sheet]) {
+                    grouped[result.sheet] = {};
+                }
+                
+                if (!grouped[result.sheet][storyName]) {
+                    grouped[result.sheet][storyName] = {};
+                }
+                
+                // Only store ONE result per row number (deduplicate)
+                if (!grouped[result.sheet][storyName][rowNum]) {
+                    grouped[result.sheet][storyName][rowNum] = result;
+                }
+            });
+            
+            // Generate HTML
+            let html = '<div style="margin-top: 20px;">';
+            let groupIndex = 0;
+            
+            Object.keys(grouped).forEach(sheetName => {
+                const stories = grouped[sheetName];
+                const storyCount = Object.keys(stories).length;
+                
+                // Count total unique rows
+                let totalRows = 0;
+                Object.values(stories).forEach(storyRows => {
+                    totalRows += Object.keys(storyRows).length;
+                });
+                
+                html += `
+                    <div style="margin-bottom: 15px; border: 1px solid var(--border-color); border-radius: 6px; overflow: hidden;">
+                        <div style="background: var(--bg-secondary); padding: 12px 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center;" onclick="toggleSheetGroup(${groupIndex})">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <span id="sheet-icon-${groupIndex}" style="color: var(--accent-mystical); font-weight: bold;">▶</span>
+                                <span style="color: var(--text-primary); font-weight: 600; font-size: 15px;">${sheetName}</span>
+                            </div>
+                            <span style="color: var(--text-secondary); font-size: 13px;">${storyCount} ${storyCount === 1 ? 'story' : 'stories'}, ${totalRows} ${totalRows === 1 ? 'row' : 'rows'}</span>
+                        </div>
+                        <div id="sheet-content-${groupIndex}" style="display: none;">
+                `;
+                
+                let storyIndex = 0;
+                Object.keys(stories).forEach(storyName => {
+                    const rowsMap = stories[storyName];
+                    const rows = Object.values(rowsMap);
+                    const uniqueId = `${groupIndex}-${storyIndex}`;
+                    
+                    html += `
+                        <div style="border-top: 1px solid var(--border-color);">
+                            <div style="background: var(--bg-card); padding: 10px 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center;" onclick="toggleStoryGroup('${uniqueId}')">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <span id="story-icon-${uniqueId}" style="color: var(--accent-royal); font-weight: bold; margin-left: 20px;">▶</span>
+                                    <span style="color: var(--text-primary); font-weight: 500;">📖 ${storyName}</span>
+                                </div>
+                                <span style="color: var(--text-secondary); font-size: 12px;">${rows.length} ${rows.length === 1 ? 'row' : 'rows'}</span>
+                            </div>
+                            <div id="story-content-${uniqueId}" style="display: none; padding: 15px; background: var(--bg-primary);">
+                    `;
+                    
+                    // Sort rows by row number
+                    rows.sort((a, b) => a.row - b.row);
+                    
+                    rows.forEach((row, rowIndex) => {
+                        const rowId = `${uniqueId}-${rowIndex}`;
+                        
+                        // Get headers from row 1 if available (we'll fetch this separately)
+                        const headers = ['Story Name', 'Posted TT', 'Posted YT', 'Posted FB', 'Week #', 'Week Date Range', 'Post #', 'Day', 'Time Slot', 'Format ID', 'Format Name', 'Angle', 'Hook Type', 'Status', 'Manual Post?', 'TT Caption', 'FB Caption', 'YT Caption', 'Image 1 URL', 'Slide 1 Text', 'Image 2 URL', 'Slide 2 Text', 'Image 3 URL', 'Slide 3 Text', 'Image 4 URL', 'Slide 4 Text'];
+                        
+                        html += `
+                            <div style="margin-bottom: 10px; border: 1px solid var(--border-color); border-radius: 4px; overflow: hidden;">
+                                <div style="background: var(--bg-secondary); padding: 8px 12px; cursor: pointer; display: flex; justify-content: space-between; align-items: center;" onclick="toggleRowDetail('${rowId}')">
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <span id="row-icon-${rowId}" style="color: var(--accent-gold); font-weight: bold;">▶</span>
+                                        <span style="color: var(--text-secondary); font-size: 12px;">Row ${row.row}</span>
+                                    </div>
+                                </div>
+                                <div id="row-detail-${rowId}" style="display: none; padding: 12px; background: var(--bg-card);">
+                                    <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                                        <thead>
+                                            <tr style="background: var(--bg-secondary);">
+                                                <th style="padding: 8px; text-align: left; color: var(--accent-mystical); font-weight: 600; border: 1px solid var(--border-color); width: 120px;">Field</th>
+                                                <th style="padding: 8px; text-align: left; color: var(--text-primary); font-weight: 600; border: 1px solid var(--border-color);">Value</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${row.fullRow.map((cell, cellIndex) => {
+                                                const columnLetter = String.fromCharCode(65 + cellIndex);
+                                                const headerName = headers[cellIndex] || `Column ${columnLetter}`;
+                                                
+                                                return `
+                                                <tr>
+                                                    <td style="padding: 8px; color: var(--text-secondary); border: 1px solid var(--border-color); font-weight: 500;">
+                                                        ${headerName}
+                                                        <span style="color: var(--accent-mystical); font-size: 10px; margin-left: 4px;">(${columnLetter})</span>
+                                                    </td>
+                                                    <td style="padding: 8px; color: var(--text-primary); border: 1px solid var(--border-color); word-break: break-word;">${cell || '<span style="color: var(--text-dim);">-</span>'}</td>
+                                                </tr>
+                                            `}).join('')}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    html += `
+                            </div>
+                        </div>
+                    `;
+                    
+                    storyIndex++;
+                });
+                
+                html += `
+                        </div>
+                    </div>
+                `;
+                
+                groupIndex++;
+            });
+            
+            html += '</div>';
+            
+            container.innerHTML = html;
+        }
+        
+        // Toggle sheet group
+        function toggleSheetGroup(index) {
+            const content = document.getElementById(`sheet-content-${index}`);
+            const icon = document.getElementById(`sheet-icon-${index}`);
+            
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                icon.textContent = '▼';
+            } else {
+                content.style.display = 'none';
+                icon.textContent = '▶';
+            }
+        }
+        
+        // Toggle story group
+        function toggleStoryGroup(id) {
+            const content = document.getElementById(`story-content-${id}`);
+            const icon = document.getElementById(`story-icon-${id}`);
+            
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                icon.textContent = '▼';
+            } else {
+                content.style.display = 'none';
+                icon.textContent = '▶';
+            }
+        }
+        
+        // Toggle row detail
+        function toggleRowDetail(id) {
+            const content = document.getElementById(`row-detail-${id}`);
+            const icon = document.getElementById(`row-icon-${id}`);
+            
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                icon.textContent = '▼';
+            } else {
+                content.style.display = 'none';
+                icon.textContent = '▶';
+            }
+        }
+        
+        // Highlight search term in results
+        function highlightMatch(text, query) {
+            if (!query) return text;
+            
+            const regex = new RegExp(`(${query})`, 'gi');
+            return text.toString().replace(regex, '<mark style="background: var(--accent-gold); color: var(--bg-primary); padding: 2px 4px; border-radius: 2px;">$1</mark>');
+        }
+        
+        // Export search results to CSV
+        function exportSearchResults() {
+            if (searchResults.length === 0) {
+                showSearchStatus('warning', '⚠️ No results to export');
+                return;
+            }
+            
+            // Create CSV content
+            const headers = ['Sheet', 'Row', 'Column', 'Matched Value'];
+            const csvRows = [headers.join(',')];
+            
+            searchResults.forEach(result => {
+                const row = [
+                    `"${result.sheet}"`,
+                    result.row,
+                    result.column || 'N/A',
+                    `"${(result.value || result.fullRow.join(' | ')).toString().replace(/"/g, '""')}"` // Escape quotes
+                ];
+                csvRows.push(row.join(','));
+            });
+            
+            const csvContent = '\uFEFF' + csvRows.join('\n'); // Add BOM for Excel
+            
+            // Create download
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            
+            link.setAttribute('href', url);
+            link.setAttribute('download', `search_results_${currentSearchQuery}_${Date.now()}.csv`);
+            link.style.visibility = 'hidden';
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            showSearchStatus('success', `✅ Exported ${searchResults.length} results to CSV`);
+        }
+        
+        // Show search status message
+        function showSearchStatus(type, message) {
+            const statusEl = document.getElementById('searchStatus');
+            if (!statusEl) return;
+            
+            statusEl.className = `status-message ${type}`;
+            statusEl.innerHTML = `<span>${message}</span>`;
+            statusEl.style.display = 'flex';
+        }
+        
+        // Update search results count
+        function updateSearchResultsCount(text) {
+            const countEl = document.getElementById('searchResultsCount');
+            if (countEl) {
+                countEl.textContent = text;
+            }
+        }
 
-/**
- * List all orefs for a story with their Drive URLs
- */
-function listOrefsForStory(data) {
-  try {
-    const storyName = data.storyName;
-    const batchId = data.batchId;
-    
-    if (!storyName) {
-      throw new Error('Story name required');
-    }
-    
-    Logger.log(`Listing orefs for story: ${storyName} - ${batchId}`);
-    
-    // Get story folder
-    const storyFolderName = batchId ? `${storyName} - ${batchId}` : storyName;
-    const parentFolder = DriveApp.getFolderById(OREF_FOLDER_ID);
-    
-    // Find story folder
-    const folders = parentFolder.getFoldersByName(storyFolderName);
-    
-    if (!folders.hasNext()) {
-      Logger.log('Story folder not found');
-      return ContentService
-        .createTextOutput(JSON.stringify({
-          success: true,
-          orefs: []
-        }))
-        .setMimeType(ContentService.MimeType.JSON);
-    }
-    
-    const storyFolder = folders.next();
-    
-    // List all files in folder
-    const files = storyFolder.getFiles();
-    const orefs = [];
-    
-    while (files.hasNext()) {
-      const file = files.next();
-      const fileName = file.getName();
-      const characterName = fileName.replace('.png', '').replace('.jpg', '').replace('.jpeg', '').replace(/_/g, ' ');
-      
-      orefs.push({
-        characterName: characterName,
-        fileName: fileName,
-        fileId: file.getId(),
-        url: `https://drive.google.com/uc?export=view&id=${file.getId()}`
-      });
-    }
-    
-    Logger.log(`Found ${orefs.length} orefs`);
-    
-    return ContentService
-      .createTextOutput(JSON.stringify({
-        success: true,
-        orefs: orefs
-      }))
-      .setMimeType(ContentService.MimeType.JSON);
-      
-  } catch (error) {
-    Logger.log('Error listing orefs:', error);
-    
-    return ContentService
-      .createTextOutput(JSON.stringify({
-        success: false,
-        error: error.toString()
-      }))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
-}
+        // ========== TAB 1: AUTOMATION TRACKER ==========
+        
+        let allBatches = [];
+        let filteredBatches = [];
+        
+        // Load batches from Weekly Calendar
+        async function loadBatches() {
+            const apiKey = localStorage.getItem('googleSheetsApiKey');
+            
+            if (!apiKey) {
+                console.log('⚠️ No API key - cannot load batches');
+                return;
+            }
+            
+            console.log('📊 Loading batches from Weekly Calendar...');
+            updateLoadingText('Loading batches...');
+            
+            try {
+                // Fetch all data from Weekly Calendar
+                const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_IDS.WEEKLY_CALENDAR}/values/Weekly%20Calendar!A:AT?key=${apiKey}`;
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    console.error('❌ Error loading batches:', data);
+                    updateLoadingText('Error loading batches');
+                    return;
+                }
+                
+                const rows = data.values || [];
+                console.log(`📊 Loaded ${rows.length} total rows`);
+                
+                // Filter out empty rows (CRITICAL)
+                const validRows = rows.filter(row => row[0] && row[0].trim() !== '');
+                console.log(`✅ Filtered to ${validRows.length} valid rows`);
+                
+                // Group rows by story name
+                const batchGroups = {};
+                
+                validRows.forEach((row, index) => {
+                    const storyName = row[0];
+                    const videoUrl = row[34]; // Column AI
+                    
+                    if (!batchGroups[storyName]) {
+                        batchGroups[storyName] = {
+                            name: storyName,
+                            rows: [],
+                            firstRowIndex: index
+                        };
+                    }
+                    
+                    batchGroups[storyName].rows.push({
+                        data: row,
+                        hasVideo: videoUrl && videoUrl.trim().length > 0
+                    });
+                });
+                
+                // Convert to array and sort by most recent (last in sheet = most recent)
+                allBatches = Object.values(batchGroups)
+                    .map(batch => {
+                        const totalPosts = batch.rows.length;
+                        const completedPosts = batch.rows.filter(r => r.hasVideo).length;
+                        const isComplete = totalPosts === 21 && completedPosts === 21;
+                        
+                        return {
+                            name: batch.name,
+                            totalPosts: totalPosts,
+                            completedPosts: completedPosts,
+                            isComplete: isComplete,
+                            progress: Math.round((completedPosts / 21) * 100),
+                            firstRowIndex: batch.firstRowIndex
+                        };
+                    })
+                    .sort((a, b) => b.firstRowIndex - a.firstRowIndex); // Most recent first
+                
+                console.log(`✅ Loaded ${allBatches.length} unique batches`);
+                
+                // Show most recent 3 by default
+                filteredBatches = allBatches.slice(0, 3);
+                
+                displayBatches(filteredBatches);
+                updateLoadingText(`Showing ${filteredBatches.length} of ${allBatches.length} stories`);
+                
+            } catch (error) {
+                console.error('❌ Error loading batches:', error);
+                updateLoadingText('Error loading batches');
+            }
+        }
+        
+        // Display batch cards
+        function displayBatches(batches) {
+            const container = document.getElementById('batchContainer');
+            
+            if (!container) {
+                console.error('❌ Batch container not found');
+                return;
+            }
+            
+            if (batches.length === 0) {
+                container.innerHTML = '<div class="placeholder"><p>No batches found</p></div>';
+                return;
+            }
+            
+            container.innerHTML = batches.map(batch => createBatchCard(batch)).join('');
+        }
+        
+        // Create a batch card HTML
+        function createBatchCard(batch) {
+            const progressColor = batch.isComplete 
+                ? 'background: linear-gradient(90deg, var(--accent-success), #34d399);'
+                : 'background: linear-gradient(90deg, var(--accent-mystical), #60a5fa);';
+            
+            const borderColor = batch.isComplete 
+                ? 'border-left-color: var(--accent-success);'
+                : 'border-left-color: var(--accent-mystical);';
+            
+            // Workflow status (simplified for now)
+            const hasPrompts = batch.completedPosts > 0;
+            const hasImages = batch.completedPosts > 5;
+            const hasVideos = batch.completedPosts > 10;
+            const isUploaded = batch.isComplete;
+            
+            const workflowHtml = `
+                <div class="workflow-status">
+                    <div class="workflow-item">
+                        <span>✅</span>
+                        <span>Story Selected</span>
+                    </div>
+                    <div class="workflow-item">
+                        <span>${hasPrompts ? '✅' : '⏳'}</span>
+                        <span>Prompts</span>
+                    </div>
+                    <div class="workflow-item">
+                        <span>${hasImages ? '✅' : '⏳'}</span>
+                        <span>Images</span>
+                    </div>
+                    <div class="workflow-item">
+                        <span>${hasVideos ? '✅' : '⏳'}</span>
+                        <span>Videos</span>
+                    </div>
+                    <div class="workflow-item">
+                        <span>${isUploaded ? '✅' : '❌'}</span>
+                        <span>Upload</span>
+                    </div>
+                </div>
+            `;
+            
+            const completionMessage = batch.isComplete 
+                ? `<div class="status-message success" style="margin-top: 10px;">
+                       <span>✅</span>
+                       <span>Batch complete - All ${batch.totalPosts} posts uploaded</span>
+                   </div>`
+                : '';
+            
+            return `
+                <div class="batch-card" style="${borderColor}">
+                    <div class="batch-title">
+                        <span>📖</span>
+                        <span>${batch.name}</span>
+                    </div>
+                    
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: ${batch.progress}%; ${progressColor}">
+                            <span class="progress-text">${batch.completedPosts} of 21 Posts${batch.isComplete ? ' ✅' : ''}</span>
+                        </div>
+                    </div>
+                    
+                    ${workflowHtml}
+                    ${completionMessage}
+                </div>
+            `;
+        }
+        
+        // Update loading text
+        function updateLoadingText(text) {
+            const loadingEls = document.querySelectorAll('.loading-text');
+            loadingEls.forEach(el => {
+                if (el.closest('.section')) { // Only update Tab 1 loading text
+                    el.textContent = text;
+                }
+            });
+        }
+        
+        // Refresh batches
+        function refreshBatches() {
+            console.log('🔄 Refreshing batches...');
+            loadBatches();
+        }
+        
+        // Search batches
+        function searchBatches(query) {
+            query = query.toLowerCase().trim();
+            
+            if (!query) {
+                filteredBatches = allBatches.slice(0, 3);
+            } else {
+                filteredBatches = allBatches.filter(batch => 
+                    batch.name.toLowerCase().includes(query)
+                );
+            }
+            
+            displayBatches(filteredBatches);
+            updateLoadingText(`Showing ${filteredBatches.length} of ${allBatches.length} stories`);
+        }
+        
+        // Show all stories toggle
+        function toggleShowAll(checked) {
+            if (checked) {
+                filteredBatches = allBatches;
+            } else {
+                filteredBatches = allBatches.slice(0, 3);
+            }
+            
+            displayBatches(filteredBatches);
+            updateLoadingText(`Showing ${filteredBatches.length} of ${allBatches.length} stories`);
+        }
+
+        // ========== PAGE INITIALIZATION ==========
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 Grimm Dashboard initializing...');
+            
+            // Load saved API keys and URLs
+            loadApiKey();
+            loadOpenAIKey();
+            loadForcePostUrl();
+            loadOrefUploadUrl();
+            
+            // Attach event listeners
+            document.querySelector('.clear-cache-btn').addEventListener('click', clearCacheAndRefresh);
+            
+            // Tab 1: Automation Tracker listeners
+            const refreshBtn = document.querySelector('#tab1RefreshBtn');
+            if (refreshBtn) {
+                refreshBtn.addEventListener('click', refreshBatches);
+            }
+            
+            const searchInput = document.querySelector('#tab1SearchInput');
+            if (searchInput) {
+                searchInput.addEventListener('input', (e) => searchBatches(e.target.value));
+            }
+            
+            const showAllCheckbox = document.querySelector('#showAll');
+            if (showAllCheckbox) {
+                showAllCheckbox.addEventListener('change', (e) => toggleShowAll(e.target.checked));
+            }
+            
+            // Load data if API key exists
+            if (localStorage.getItem('googleSheetsApiKey')) {
+                setTimeout(() => {
+                    console.log('📊 Loading initial data...');
+                    loadBatches();
+                    loadTab2StoryNames(); // Load story names for Tab 2 (renamed to avoid conflict with Tab 4)
+                    loadTab4StoryNames(); // Load story names for Tab 4 Global Search dropdown
+                    console.log('✅ Initial data load triggered');
+                }, 1000);
+            } else {
+                console.log('⚠️ No API key found - skipping data load');
+            }
+            
+            console.log('✅ Dashboard initialized');
+        });
+    </script>
+</body>
+</html>
