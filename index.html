@@ -2092,9 +2092,12 @@
                 if (result.success) {
                     console.log(`✅ Oref uploaded successfully: ${result.url}`);
                     
+                    // Use trimmed name as key
+                    const cleanName = characterName.trim();
+                    
                     // Update with Drive URL automatically
-                    characterOrefs[characterName] = {
-                        fileUrl: characterOrefs[characterName]?.fileUrl || result.url,
+                    characterOrefs[cleanName] = {
+                        fileUrl: characterOrefs[cleanName]?.fileUrl || result.url,
                         driveUrl: result.url,
                         file: file,
                         uploading: false
@@ -2108,7 +2111,7 @@
                     // Refresh prompt display to show updated orefs
                     displayPromptMatches();
                     
-                    alert(`✅ Oref uploaded!\n\nCharacter: ${characterName}\nDrive URL saved automatically.`);
+                    alert(`✅ Oref uploaded!\n\nCharacter: ${cleanName}\nDrive URL saved automatically.`);
                 } else {
                     throw new Error(result.error || 'Upload failed');
                 }
@@ -2170,9 +2173,20 @@
             
             for (const [name, oref] of Object.entries(characterOrefs)) {
                 if (oref.driveUrl && oref.driveUrl !== '(uploaded - check Drive)') {
-                    data[name] = oref.driveUrl;
+                    // Trim the name to remove any newlines or whitespace
+                    data[name.trim()] = oref.driveUrl;
                 }
             }
+            
+            // Also save combo orefs
+            const comboKey = `comboOrefs_${currentStory}_${currentBatchId || 'default'}`;
+            const comboData = {};
+            for (const [name, oref] of Object.entries(comboOrefs)) {
+                if (oref.driveUrl) {
+                    comboData[name.trim()] = oref.driveUrl;
+                }
+            }
+            localStorage.setItem(comboKey, JSON.stringify(comboData));
             
             localStorage.setItem(key, JSON.stringify(data));
             console.log(`💾 Saved ${Object.keys(data).length} oref URLs to localStorage`);
@@ -2189,17 +2203,41 @@
                 try {
                     const data = JSON.parse(saved);
                     for (const [name, url] of Object.entries(data)) {
-                        if (!characterOrefs[name]) {
-                            characterOrefs[name] = {};
+                        // Trim the name when loading
+                        const cleanName = name.trim();
+                        if (!characterOrefs[cleanName]) {
+                            characterOrefs[cleanName] = {};
                         }
-                        characterOrefs[name].driveUrl = url;
-                        if (!characterOrefs[name].fileUrl) {
-                            characterOrefs[name].fileUrl = url; // Use Drive URL as preview
+                        characterOrefs[cleanName].driveUrl = url;
+                        if (!characterOrefs[cleanName].fileUrl) {
+                            characterOrefs[cleanName].fileUrl = url;
                         }
                     }
                     console.log(`📂 Loaded ${Object.keys(data).length} oref URLs from localStorage`);
                 } catch (e) {
                     console.error('Error loading orefs from localStorage:', e);
+                }
+            }
+            
+            // Also load combo orefs
+            const comboKey = `comboOrefs_${currentStory}_${currentBatchId || 'default'}`;
+            const comboSaved = localStorage.getItem(comboKey);
+            if (comboSaved) {
+                try {
+                    const comboData = JSON.parse(comboSaved);
+                    for (const [name, url] of Object.entries(comboData)) {
+                        const cleanName = name.trim();
+                        if (!comboOrefs[cleanName]) {
+                            comboOrefs[cleanName] = {};
+                        }
+                        comboOrefs[cleanName].driveUrl = url;
+                        if (!comboOrefs[cleanName].fileUrl) {
+                            comboOrefs[cleanName].fileUrl = url;
+                        }
+                    }
+                    console.log(`📂 Loaded ${Object.keys(comboData).length} combo oref URLs from localStorage`);
+                } catch (e) {
+                    console.error('Error loading combo orefs:', e);
                 }
             }
         }
