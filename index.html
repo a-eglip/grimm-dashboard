@@ -2002,19 +2002,24 @@
             }
             
             container.innerHTML = characterList.map(char => {
-                const hasOref = characterOrefs[char.name];
+                // Use trimmed name for lookup
+                const cleanName = char.name.trim();
+                const hasOref = characterOrefs[cleanName];
+                const imageUrl = hasOref?.fileUrl || hasOref?.driveUrl;
+                
                 return `
                     <div class="character-card">
                         <div class="character-info">
-                            <div class="character-name">${char.name}</div>
+                            <div class="character-name">${cleanName}</div>
                             <div class="character-description">${char.description}</div>
                         </div>
                         <div class="oref-upload-area">
-                            ${hasOref ? `<img src="${hasOref.fileUrl}" class="oref-preview" alt="${char.name}">` : ''}
-                            <input type="file" id="file-${char.name.replace(/\s+/g, '_')}" accept="image/*" style="display: none;" onchange="handleOrefUpload(\`${char.name.replace(/'/g, "\\'")}\`, this)">
-                            <button class="upload-btn" onclick="document.getElementById('file-${char.name.replace(/\s+/g, '_')}').click()">
-                                ${hasOref ? '✓ Change' : '📤 Upload'} Oref
+                            ${imageUrl ? `<img src="${imageUrl}" class="oref-preview" alt="${cleanName}" onerror="this.style.display='none'">` : ''}
+                            <input type="file" id="file-${cleanName.replace(/\s+/g, '_')}" accept="image/*" style="display: none;" onchange="handleOrefUpload('${cleanName.replace(/'/g, "\\'")}', this)">
+                            <button class="upload-btn" onclick="document.getElementById('file-${cleanName.replace(/\s+/g, '_')}').click()">
+                                ${hasOref?.driveUrl ? '✓ Change' : '📤 Upload'} Oref
                             </button>
+                            ${hasOref?.driveUrl ? '<div style="font-size: 11px; color: var(--accent-success); margin-top: 4px;">✅ Drive URL saved</div>' : ''}
                         </div>
                     </div>
                 `;
@@ -2687,6 +2692,12 @@ If no characters found, respond with: []`
                 const allMatches = p.matches.filter(m => m.confidence === 'exact' || m.confidence === 'likely');
                 const bestOref = getBestOrefForPrompt(p.matches);
                 
+                // Build the prompt text WITH --oref URL if available
+                let displayPrompt = p.prompt;
+                if (bestOref && bestOref.url) {
+                    displayPrompt = `${p.prompt} --oref ${bestOref.url}`;
+                }
+                
                 return `
                     <div class="prompt-match-card" style="display: flex; gap: 15px; align-items: flex-start;">
                         <div style="flex: 1;">
@@ -2696,14 +2707,14 @@ If no characters found, respond with: []`
                                     Characters: ${allMatches.map(m => m.name).join(', ') || 'None detected'}
                                 </span>
                             </div>
-                            <div class="prompt-text" style="font-size: 13px; margin: 8px 0;">${p.prompt}</div>
+                            <div class="prompt-text" style="font-size: 13px; margin: 8px 0; word-break: break-all;">${displayPrompt}</div>
                             
                             ${bestOref && bestOref.url ? `
                                 <div style="font-size: 12px; color: var(--accent-success); margin-top: 8px;">
                                     ✅ Using ${bestOref.type === 'combo' ? 'combo' : 'character'} oref: <strong>${bestOref.name}</strong>
                                 </div>
-                            ` : bestOref && bestOref.missing ? `
-                                <div style="font-size: 12px; color: var(--accent-warning); margin-top: 8px;">
+                            ` : bestOref && bestOref.missing && bestOref.missing.length > 0 ? `
+                                <div style="font-size: 12px; color: #f59e0b; margin-top: 8px;">
                                     ⚠️ Missing oref for: ${bestOref.missing.join(', ')}
                                 </div>
                             ` : `
